@@ -1,0 +1,15 @@
+# Opt-in entry: installation must not connect until deployment config is supplied.
+- insert:
+    - id: collaboration-client
+      name: dsh-collaboration-client
+      disabled: true
+      config:
+        provider: workbench-remote
+        model: server-agent
+        serviceId: !!js process.env.DSH_COLLABORATION_SERVICE_ID
+        databasePath: !!js process.env.DSH_COLLABORATION_CLIENT_DATABASE
+        ssh:
+          host: !!js process.env.DSH_COLLABORATION_SSH_HOST
+          account: !!js process.env.DSH_COLLABORATION_SSH_ACCOUNT
+          identityFile: !!js process.env.DSH_COLLABORATION_SSH_IDENTITY_FILE
+          knownHostsFile: !!js process.env.DSH_COLLABORATION_SSH_KNOWN_HOSTS

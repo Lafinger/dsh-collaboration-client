@@ -1,0 +1,22 @@
+{
+  "name": "dsh-collaboration-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "UNLICENSED",
+  "description": "DSH member entry plugin: SSH transport, durable remote-session mapping and no-replay recovery.",
+  "engines": { "node": ">=24.0.0" },
+  "main": "src/member-plugin.mjs",
+  "exports": { ".": "./src/member-plugin.mjs", "./client": "./src/member-client.mjs", "./protocol": "./src/protocol.mjs", "./package.json": "./package.json" },
+  "files": ["src", "cordis.patch.yml", "docs", "GLOSSARY.md", "README.md", "PROVENANCE.json"],
+  "dsh": { "bundle": { "patch": "cordis.patch.yml" } },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "integration": "node --import ./scripts/official-loader.mjs --test test/*.integration.mjs",
+    "check": "node scripts/check.mjs",
+    "check:joint": "node --import ./scripts/official-loader.mjs --test test/joint/*.joint.mjs",
+    "pack:check": "node scripts/check-package.mjs"
+  },
+  "peerDependencies": { "@deepseek-ai/cordis": "4.0.2", "@deepseek-ai/dsh-llm": "0.1.5-rc.2", "@deepseek-ai/dsh-session": "0.1.5-rc.2", "@deepseek-ai/schemastery": "3.18.2" },
+  "devDependencies": { "@deepseek-ai/cordis": "4.0.2", "@deepseek-ai/schemastery": "3.18.2" }
+}
