@@ -2,7 +2,9 @@
 
 ## 边界
 
-本项目是 DSH host-side Cordis 插件，不是新 Web 应用。已验证官方 0.1.5-rc.2 插件接口与打包入口，尚未验证现用 0.2 GUI 的加载/渲染；不能将本说明当作 GUI 验收通过。
+本项目是 DSH host-side Cordis 插件，不是新 Web 应用。客户端 **0.1.1** 明确适配 **DSH 0.2.0-rc.2 / Cordis 4.0.4 / Schemastery 3.18.4**；已验证本机实际安装器接受与宿主官方接口集成。GUI 渲染和真实 SSH 仍未验收，不将安装成功当作完整业务连通。
+
+如果 GUI 提示 `dsh-collaboration-client@0.1.0 ... 要求 0.1.5-rc.2`：旧包的约束不是当前宿主版本。请选择修正后的本地目录或新生成的 0.1.1 tarball 重试，不再使用旧 tarball，也不要点击允许不兼容版本。服务端无须为此升级。
 
 插件使用独立成员 SSH 密钥，服务器地址、账号和 known_hosts 由部署人员配置。服务器指纹必须通过可信渠道核对，不使用自动跳过检查或首次无条件接受。
 
@@ -34,7 +36,13 @@ dsh plugin --profile collaboration-client-test add /absolute/dsh-collaboration-c
       knownHostsFile: /absolute/client/known_hosts
 ```
 
-profile patch 语法必须以部署使用的 DSH loader 实际配置为准；本轮没有安装或运行 GUI profile。已有桌面环境可直接使用本地绝对路径插件 entry 和同样 config 做隔离测试。
+profile patch 语法必须以部署使用的 DSH loader 实际配置为准。修复在独立 `collaboration-compat-*` profile 验证安装，不修改现用 desktop 配置。本轮没有启动替代 Web 服务，没有运行 GUI profile；插件默认 disabled，配置并启用后才能连接业务服务。
+
+Windows 可复跑真实安装检查（脚本拒绝 desktop/acp profile 名称）：
+
+```powershell
+./scripts/check-install.ps1 -Cli 'C:\path\to\dsh.cmd' -Package 'C:\absolute\dsh-collaboration-client-0.1.1.tgz'
+```
 
 父目录需预先存在；`databasePath` 为客户端自己的状态库。绝对 identityFile/knownHostsFile、key-only、BatchMode、StrictHostKeyChecking 与禁止 agent/端口转发不可移除。服务端 forced command 固定 `workbench-connect`，它是轻量连接器，不启动第二套 DSH。
 

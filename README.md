@@ -16,7 +16,7 @@
 
 ## 开发与检查
 
-要求 Node >=24、pnpm，官方接口固定 `0.1.5-rc.2`/Cordis `4.0.2`。使用本项目 lockfile 安装，不升级宿主 DSH：
+客户端 **0.1.1** 对应宿主 **DSH 0.2.0-rc.2**，Cordis `4.0.4`、Schemastery `3.18.4`。要求 Node >=24、pnpm，使用本项目 lockfile 安装；旧客户端 0.1.0 的 0.1.5 peer 声明会被当前安装器正确拒绝，不应使用版本豁免绕过。服务器仍保持原有版本，通过版本1协议通信：
 
 ```sh
 pnpm install --frozen-lockfile --ignore-scripts

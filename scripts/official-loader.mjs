@@ -7,7 +7,7 @@ const root = process.env.WORKBENCH_OFFICIAL_NODE_MODULES;
 if (root) {
 for (const name of ['dsh-llm', 'dsh-session']) {
   const metadata = JSON.parse(readFileSync(resolve(root, '@deepseek-ai', name, 'package.json'), 'utf8'));
-  if (metadata.version !== '0.1.5-rc.2') throw new Error(`Prototype requires 0.1.5-rc.2 package family; ${name}=${metadata.version}`);
+  if (metadata.version !== '0.2.0-rc.2') throw new Error(`Client requires verified 0.2.0-rc.2 package family; ${name}=${metadata.version}`);
 }
 const parentURL = pathToFileURL(resolve(root, 'workbench-prototype-resolution.mjs')).href;
 registerHooks({ resolve(specifier, context, nextResolve) {

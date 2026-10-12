@@ -8,7 +8,24 @@
 
 打包检查确认 main/exports/bundle 文件与内部相对 import 全在 tarball 中，并在抽取的独立目录加载插件；外部官方依赖来自本仓，不依赖旧业务目录。
 
-## 拆分后实测结果
+## 0.1.1 修复：当前 DSH 安装拒绝
+
+根因：0.1.0 将 `dsh-llm` / `dsh-session` peer 精确固定到 0.1.5-rc.2，而用户宿主为0.2.0-rc.2。真实安装器在独立 profile 两次重现截图中的拒绝、退出码1、nothing was installed；不是服务器错误。
+
+先用已安装 Electron Node 模式直接运行插件接口集成并通过，再更新 peer 和 lockfile，不放宽到通配范围，不授予版本豁免。0.1.1 精确固定到已验证宿主0.2.0-rc.2、Cordis4.0.4、Schemastery3.18.4，业务/协议代码不变。
+
+- 新包版本约束回归先失败、修复后通过；单元测试 **9/9 PASS**。
+- 本仓0.2依赖集成 **4/4 PASS**，包括真实 `ctx.llm.stream` route、辅助调用拒绝、schema、恢复 notice。
+- 本机安装的0.2官方模块集成 **4/4 PASS**，不是只使用 npm 模拟旧版。
+- 同一真实安装复现命令修复后退出码0，隔离 profile 注册 package/bundle；无版本豁免。
+- 更新后的客户端与未升级服务器联合测试 **3/3 PASS**；协议文件不变。
+- 修正版 tarball 真正安装后，用应用内0.2服务挂载该安装副本，注册 `server-agent` 成功，未发起 SSH。
+
+isolated profile 的 `pnpm peers check` 报 host-supplied peers 不在 profile 自己的依赖树中；检查退出码1已记录，不用安装第二套 runtime 来消除提示。宿主模块直接挂载通过，但完整 profile `--help` 在当前隔离环境持续等待而未产生反馈，已取消。因此不宣称完整 profile 启动或 GUI 验收通过。
+
+[真实安装检查脚本](../scripts/check-install.ps1)可复跑接受/拒绝检查；只允许专用隔离 profile。现用 desktop profile 没有改动。完整 GUI/SSH 验收仍见下方边界。
+
+## 拆分时 0.1.0 历史结果
 
 Windows、Node 24.21.0、pnpm 11.7.0、各自 fresh node_modules 和 lockfile：
 
