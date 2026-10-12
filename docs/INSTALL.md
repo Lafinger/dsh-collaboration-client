@@ -13,7 +13,7 @@
 
 ## Windows 最短配置步骤
 
-1. 安装修正版0.1.2。
+1. 在DSH插件管理器输入 `github:Lafinger/dsh-collaboration-client`，或固定版本 `github:Lafinger/dsh-collaboration-client#v0.1.2`。也可下载GitHub Release的tgz安装；区别见[发布说明](RELEASE.md)。
 2. 将[空配置模板](../examples/client-config.example.json)复制为 `%USERPROFILE%\.dsh\collaboration-client.json`（本机对应 `C:\Users\cjh13\.dsh\collaboration-client.json`）。**若目标已存在先阅读，不要覆盖。**
 3. 填写部署人员提供的真实信息：
 

@@ -4,8 +4,13 @@
   "private": true,
   "type": "module",
   "license": "UNLICENSED",
+  "packageManager": "pnpm@11.7.0",
+  "repository": { "type": "git", "url": "git+https://github.com/Lafinger/dsh-collaboration-client.git" },
+  "homepage": "https://github.com/Lafinger/dsh-collaboration-client#readme",
+  "bugs": { "url": "https://github.com/Lafinger/dsh-collaboration-client/issues" },
+  "keywords": ["dsh-plugin", "deepseek-harness", "collaboration", "ssh"],
   "description": "DSH member entry plugin: SSH transport, durable remote-session mapping and no-replay recovery.",
-  "engines": { "node": ">=24.0.0" },
+  "engines": { "node": ">=24.0.0", "dsh": "0.2.0-rc.2" },
   "main": "src/member-plugin.mjs",
   "exports": { ".": "./src/member-plugin.mjs", "./client": "./src/member-client.mjs", "./protocol": "./src/protocol.mjs", "./package.json": "./package.json" },
   "files": ["src", "cordis.patch.yml", "scripts/check-install.ps1", "scripts/check-config.mjs", "examples", "docs", "GLOSSARY.md", "README.md", "PROVENANCE.json"],
@@ -16,7 +21,8 @@
     "check": "node scripts/check.mjs",
     "check:joint": "node --import ./scripts/official-loader.mjs --test test/joint/*.joint.mjs",
     "pack:check": "node scripts/check-package.mjs",
-    "config:check": "node scripts/check-config.mjs"
+    "config:check": "node scripts/check-config.mjs",
+    "install:check": "node scripts/check-github-install.mjs"
   },
   "peerDependencies": { "@deepseek-ai/cordis": "4.0.4", "@deepseek-ai/dsh-llm": "0.2.0-rc.2", "@deepseek-ai/dsh-session": "0.2.0-rc.2", "@deepseek-ai/schemastery": "3.18.4" },
   "devDependencies": { "@deepseek-ai/cordis": "4.0.4", "@deepseek-ai/schemastery": "3.18.4" }

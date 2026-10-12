@@ -14,6 +14,16 @@
 
 客户端不含服务端签名密钥、账号认证权威、业务库或工作台工具。只有自身会话映射使用的 SQLite，不与服务器业务库混用。保留本地 DSH loop，但不调用本地业务模型；只转发最新有稳定 ID 的 user-source 文本。
 
+## 从 GitHub 安装
+
+DSH 插件管理器安装来源填写：
+
+```text
+github:Lafinger/dsh-collaboration-client
+```
+
+正式使用可固定发行版：`github:Lafinger/dsh-collaboration-client#v0.1.2`。无版本入口读取默认分支，不自动选择最新Release。仅GitHub构建/发布，不发布npm或插件市场；自动测试、标签发布和Release下载见[发布说明](docs/RELEASE.md)。
+
 ## 首次配置
 
 安装后仅启用开关不代表业务连通。0.1.2 空配置进入安全的“待配置”状态；不会连接、不建库、不注册业务模型。将[空模板](examples/client-config.example.json)复制到用户 `.dsh/collaboration-client.json`，填入真实服务Id、SSH主机、独立账号及本机密钥/known_hosts路径；检查后重新启用组件。没有 GUI 配置表单，详细步骤见[连接配置](docs/INSTALL.md)。

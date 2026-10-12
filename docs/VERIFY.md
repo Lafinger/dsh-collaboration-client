@@ -8,6 +8,14 @@
 
 打包检查确认 main/exports/bundle 文件与内部相对 import 全在 tarball 中，并在抽取的独立目录加载插件；外部官方依赖来自本仓，不依赖旧业务目录。
 
+## GitHub-only 自动构建与发布
+
+工作流双平台检查（Linux/Windows）→ 一份经核验的包 → tag-only GitHub Release；不发布npm或插件市场。package保留private:true，安装入口在仓库，无prepare/install构建。
+
+本地新增四项发布策略与四项Release API替身测试：标签不符/非本仓/开启npm发布/需要安装构建均拒绝；首次draft上传后公开、相同附件重跑、不同附件拒绝覆盖、公开版本缺附件拒绝修改。
+
+GitHub来源与线上Actions/Release以实际远端验证为准；不能拿本地包成功替代`github:`来源安装。步骤见[发布说明](RELEASE.md)。
+
 ## 0.1.2 修复：空配置启用异常
 
 真实 `ctx.plugin(plugin, bundled-empty-config)` / `fiber.await()` 先重现截图的 `ValidationError: $.serviceId missing required value`。根因是0.1.1 required schema在 apply之前拒绝空字段，而且没有GUI配置表单。
