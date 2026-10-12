@@ -14,7 +14,7 @@
 
 本地新增四项发布策略与四项Release API替身测试：标签不符/非本仓/开启npm发布/需要安装构建均拒绝；首次draft上传后公开、相同附件重跑、不同附件拒绝覆盖、公开版本缺附件拒绝修改。
 
-GitHub来源与线上Actions/Release以实际远端验证为准；不能拿本地包成功替代`github:`来源安装。步骤见[发布说明](RELEASE.md)。
+GitHub来源与线上Actions/Release已实际验证：main和v0.1.2双平台CI成功，tag自动Release公开，默认分支和固定tag都通过真实DSH installer与宿主挂载；下载附件hash核验和同产物重跑通过。证据见[首版验收](GITHUB-RELEASE-VERIFY.md)，步骤见[发布说明](RELEASE.md)。
 
 ## 0.1.2 修复：空配置启用异常
 

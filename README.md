@@ -22,7 +22,7 @@ DSH 插件管理器安装来源填写：
 github:Lafinger/dsh-collaboration-client
 ```
 
-正式使用可固定发行版：`github:Lafinger/dsh-collaboration-client#v0.1.2`。无版本入口读取默认分支，不自动选择最新Release。仅GitHub构建/发布，不发布npm或插件市场；自动测试、标签发布和Release下载见[发布说明](docs/RELEASE.md)。
+正式使用可固定发行版：`github:Lafinger/dsh-collaboration-client#v0.1.2`。无版本入口读取默认分支，不自动选择最新Release。仅GitHub构建/发布，不发布npm或插件市场；自动测试、标签发布和Release下载见[发布说明](docs/RELEASE.md)，已完成[首版线上验收](docs/GITHUB-RELEASE-VERIFY.md)。
 
 ## 首次配置
 
