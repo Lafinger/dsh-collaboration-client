@@ -34,7 +34,7 @@ release.json中的commit等于标签提交；registryPublication和marketPublica
 
 ## 测试和权限边界
 
-本地21项单元测试+6项集成测试通过；线上双平台相同check通过。发布策略测试和API替身覆盖首发、相同产物重跑、不同附件拒绝覆盖、公开版本不补改附件。源库维持private:true和UNLICENSED；未执行npm publish、npm认证配置或市场投稿。
+本地21项单元测试+6项集成测试通过；线上双平台相同check通过。发布策略测试和API替身覆盖首发、相同产物重跑、不同附件拒绝覆盖、公开版本不补改附件。首发时源库维持private:true和UNLICENSED（历史事实；当前main后续已改为[MIT许可证](../LICENSE)，未改动已发布附件）；未执行npm publish、npm认证配置或市场投稿。
 
 实际验证只创建专用profile；未改现用desktop/acp配置、服务器代码或业务库。真实GUI交互、Linux SSH隔离与模型业务连通仍未验收。发行版安装不等于已经配置或连上服务；后续步骤见[连接配置](INSTALL.md)。
 

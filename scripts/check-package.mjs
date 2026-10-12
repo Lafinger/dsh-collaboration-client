@@ -18,6 +18,9 @@ const metadata=JSON.parse(entries.get('package.json').toString('utf8'));for(cons
 const declared=[metadata.main,...Object.values(metadata.exports??{}),...Object.values(metadata.bin??{})].filter(v=>typeof v==='string');for(const name of declared)assert.ok(entries.has(name.replace(/^\.\//,'')),'Package entry missing '+name);
 for(const [name,bytes]of entries){if(!name.endsWith('.mjs')&&!name.endsWith('.js'))continue;for(const match of bytes.toString('utf8').matchAll(/(?:from\s*|import\s*|import\()\s*['"](\.[^'"]+)['"]/g)){const target=posix.normalize(posix.join(posix.dirname(name),match[1]));assert.ok(entries.has(target),'Internal packaged import missing '+name+' => '+target);}}
 mkdirSync(join(root,'.dsh'),{recursive:true});const detached=mkdtempSync(join(root,'.dsh/packed-'));for(const[name,bytes]of entries){const target=join(detached,name);mkdirSync(dirname(target),{recursive:true});writeFileSync(target,bytes);}
+assert.equal(metadata.license, 'MIT', 'Package must declare the approved MIT license');
+assert.ok(entries.has('LICENSE'), 'License text missing from distributable');
+assert.match(entries.get('LICENSE').toString('utf8'), /^MIT License\n/);
 assert.ok(entries.has('cordis.patch.yml'), 'DSH bundle patch missing');
 assert.equal(metadata.dsh?.bundle?.patch, 'cordis.patch.yml');
 assert.match(entries.get('cordis.patch.yml').toString('utf8'), /disabled:\s*true/);

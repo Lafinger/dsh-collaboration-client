@@ -3,7 +3,7 @@
   "version": "0.1.2",
   "private": true,
   "type": "module",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "packageManager": "pnpm@11.7.0",
   "repository": { "type": "git", "url": "git+https://github.com/Lafinger/dsh-collaboration-client.git" },
   "homepage": "https://github.com/Lafinger/dsh-collaboration-client#readme",
@@ -13,7 +13,7 @@
   "engines": { "node": ">=24.0.0", "dsh": "0.2.0-rc.2" },
   "main": "src/member-plugin.mjs",
   "exports": { ".": "./src/member-plugin.mjs", "./client": "./src/member-client.mjs", "./protocol": "./src/protocol.mjs", "./package.json": "./package.json" },
-  "files": ["src", "cordis.patch.yml", "scripts/check-install.ps1", "scripts/check-config.mjs", "examples", "docs", "GLOSSARY.md", "README.md", "PROVENANCE.json"],
+  "files": ["src", "cordis.patch.yml", "scripts/check-install.ps1", "scripts/check-config.mjs", "examples", "docs", "GLOSSARY.md", "README.md", "LICENSE", "PROVENANCE.json"],
   "dsh": { "bundle": { "patch": "cordis.patch.yml" } },
   "scripts": {
     "test": "node --test test/*.test.mjs",

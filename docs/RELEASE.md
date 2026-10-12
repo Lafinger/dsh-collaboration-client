@@ -2,7 +2,7 @@
 
 ## 范围
 
-只向 GitHub 发布，不向 npm registry 或 DSH 插件市场发布。保留 `private:true` 与 `UNLICENSED`；没有 NPM_TOKEN、OIDC npm 发布、市场投稿或登记步骤。官方依赖下载可能访问 npm，这与发布本插件到 npm 是两回事。
+只向 GitHub 发布，不向 npm registry 或 DSH 插件市场发布。保留 `private:true` 防止 npm 发布，代码采用 [MIT 许可证](../LICENSE)；没有 NPM_TOKEN、OIDC npm 发布、市场投稿或登记步骤。官方依赖下载可能访问 npm，这与发布本插件到 npm 是两回事。
 
 本插件的执行入口是仓库内的 `.mjs`，不需要 prepare/install/prepack 构建。`github:` 来源可直接取得 main/exports、bundle patch、配置模块和模板，不依赖工作区 build 输出。
 

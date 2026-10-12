@@ -46,3 +46,7 @@ DSH_COLLABORATION_SERVER_ROOT=/absolute/server-checkout pnpm run check:joint
 ```
 
 打包插件默认 disabled；部署人员配置并启用后才连接，不在安装时自动访问服务器。没有修改现用 desktop/acp profile，也没有替换现用 Web 服务。
+
+## 许可证
+
+本仓库当前代码以 [MIT License](LICENSE) 授权，Copyright (c) 2026 Lafinger。第三方依赖遵循各自许可证。已发布的 v0.1.2 标签及附件保持原样；本次许可声明变更不重打标签或覆盖旧附件。
