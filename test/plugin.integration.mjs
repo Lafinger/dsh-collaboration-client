@@ -3,15 +3,17 @@ import assert from 'node:assert/strict';
 import { Context } from '@deepseek-ai/cordis';
 import { LlmRuntime, createUserMessage } from '@deepseek-ai/dsh-llm';
 import { SessionStore } from '@deepseek-ai/dsh-session';
-import { apply, MemberAdapter } from '../src/member-plugin.mjs';
+import * as plugin from '../src/member-plugin.mjs';
+import { MemberAdapter } from '../src/member-plugin.mjs';
+import { resolve } from 'node:path';
 
 test('plugin mounts actual adapter and recovery snapshot is non-user local context', async () => {
   const ctx = new Context(); const llmFiber = ctx.plugin(LlmRuntime); const sessionFiber = ctx.plugin(SessionStore);
   await llmFiber.await(); await sessionFiber.await();
   const session = ctx.sessions.create('local-recovery');
   ctx.provide('agents', { get: id => id === session.id ? { session } : undefined });
-  const fiber = ctx.plugin({ name: 'test-member-entry', inject: ['llm'], apply }, {
-    databasePath: ':memory:', serviceId: 'test', provider: 'workbench-remote', ssh: { account: 'alice' },
+  const fiber = ctx.plugin(plugin, {
+    databasePath: ':memory:', serviceId: 'test', provider: 'workbench-remote', ssh: { account: 'alice', host: 'example.test', identityFile: resolve('fixture-key'), knownHostsFile: resolve('fixture-known-hosts') },
   });
   try {
     await fiber.await();

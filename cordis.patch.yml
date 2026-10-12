@@ -4,12 +4,5 @@
       name: dsh-collaboration-client
       disabled: true
       config:
-        provider: workbench-remote
-        model: server-agent
-        serviceId: !!js process.env.DSH_COLLABORATION_SERVICE_ID
-        databasePath: !!js process.env.DSH_COLLABORATION_CLIENT_DATABASE
-        ssh:
-          host: !!js process.env.DSH_COLLABORATION_SSH_HOST
-          account: !!js process.env.DSH_COLLABORATION_SSH_ACCOUNT
-          identityFile: !!js process.env.DSH_COLLABORATION_SSH_IDENTITY_FILE
-          knownHostsFile: !!js process.env.DSH_COLLABORATION_SSH_KNOWN_HOSTS
+        # Empty enable is safe and reads the member-owned default JSON configuration.
+        configFile: !!js process.env.DSH_COLLABORATION_CLIENT_CONFIG

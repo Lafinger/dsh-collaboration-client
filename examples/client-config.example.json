@@ -1,0 +1,11 @@
+{
+  "serviceId": "",
+  "databasePath": "",
+  "ssh": {
+    "host": "",
+    "account": "",
+    "port": 22,
+    "identityFile": "",
+    "knownHostsFile": ""
+  }
+}

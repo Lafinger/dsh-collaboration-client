@@ -29,7 +29,7 @@ test('adapter converts response chunks and submits latest human message only',as
  try{const first=human('first');const second=human('second');const assembler=new BlockAssembler();for await(const chunk of adapter.stream({provider:'workbench-remote',model:'server-agent',sessionId:'local',messages:[first,second],tools:[{name:'LOCAL_SENTINEL'}]}))assembler.push(chunk);
  assert.equal(service.prompts.length,1);assert.deepEqual(service.prompts[0].prompt,[{type:'text',text:'second'}]);assert.ok(!JSON.stringify(service.prompts).includes('LOCAL_SENTINEL'));assert.equal(assembler.blocks()[0].text,'reply:second');assert.equal(assembler.finish.kind,'stop');}finally{client.close();}
 });
-test('plugin config schema requires provisioned connection, never defaults to a real service',async()=>{
- const empty=await Config['~standard'].validate({});assert.ok(empty.issues?.length);
- const valid=await Config['~standard'].validate({databasePath:':memory:',serviceId:'test',ssh:{account:'alice',host:'example.test',identityFile:'/key',knownHostsFile:'/known_hosts'}});assert.ok(!valid.issues);assert.equal(valid.value.provider,'workbench-remote');
+test('schema accepts initial empty state; connection validation happens before activation',async()=>{
+ const empty=await Config['~standard'].validate({});assert.ok(!empty.issues);
+ const valid=await Config['~standard'].validate({databasePath:':memory:',serviceId:'test',ssh:{account:'alice',host:'example.test',identityFile:'/key',knownHostsFile:'/known_hosts'}});assert.ok(!valid.issues);
 });

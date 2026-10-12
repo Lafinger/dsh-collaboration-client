@@ -8,6 +8,21 @@
 
 打包检查确认 main/exports/bundle 文件与内部相对 import 全在 tarball 中，并在抽取的独立目录加载插件；外部官方依赖来自本仓，不依赖旧业务目录。
 
+## 0.1.2 修复：空配置启用异常
+
+真实 `ctx.plugin(plugin, bundled-empty-config)` / `fiber.await()` 先重现截图的 `ValidationError: $.serviceId missing required value`。根因是0.1.1 required schema在 apply之前拒绝空字段，而且没有GUI配置表单。
+
+修复不是默认假账号/假服务器，也不是取消连接校验：schema接受初始未配置状态，独立解析器在建库/注册adapter之前验证完整连接。缺失、非法JSON、服务端密钥字段、含不支持SSH字段、相对路径或不安全主机均安全待配置，日志不回显密钥。完整配置才创建客户端私有状态库并注册adapter，连接仍是lazy。
+
+新增[配置模板](../examples/client-config.example.json)、[配置检查](../scripts/check-config.mjs)和用户默认JSON入口。GUI没有配置表单，已在安装文档明确，不宣称不存在的配置按钮。
+
+- 原失败复现修复后 **PASS**，空配置不产生client/adapter/SSH。
+- 单元测试 **13/13 PASS**；真实0.2插件集成 **6/6 PASS**，包括JSON入口配置完整后的实际挂载。
+- 已安装应用内0.2模块集成 **6/6 PASS**。
+- 未改动服务器的联合协议与双循环测试 **3/3 PASS**。
+- 修正版 tarball 真实安装 **PASS**，安装副本使用应用内模块验证 **emptyEnable PASS / jsonConfiguredMount PASS**，没有发起SSH。
+- 冻结依赖、包完整性、代码/文档链接审计 **PASS**。
+
 ## 0.1.1 修复：当前 DSH 安装拒绝
 
 根因：0.1.0 将 `dsh-llm` / `dsh-session` peer 精确固定到 0.1.5-rc.2，而用户宿主为0.2.0-rc.2。真实安装器在独立 profile 两次重现截图中的拒绝、退出码1、nothing was installed；不是服务器错误。

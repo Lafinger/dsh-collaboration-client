@@ -2,20 +2,20 @@ import { LlmAdapter, createUserMessage } from '@deepseek-ai/dsh-llm';
 import z from '@deepseek-ai/schemastery';
 import { MemberClient } from './member-client.mjs';
 import { openSsh } from './ssh.mjs';
-import { AccessError } from './protocol.mjs';
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
+import { resolveMemberConfiguration } from './configuration.mjs';
 
 export const name = 'collaboration-client';
 export const inject = ['llm'];
 export const Config = z.object({
-  provider: z.string().default('workbench-remote'),
-  model: z.string().default('server-agent'),
-  serviceId: z.string().required(),
-  databasePath: z.string().required(),
+  configFile: z.string().description('客户端 JSON 配置的绝对路径；未指定时读取用户 .dsh/collaboration-client.json。'),
+  provider: z.string(), model: z.string(),
+  serviceId: z.string(), databasePath: z.string(),
   ssh: z.object({
-    host: z.string().required(), account: z.string().required(),
-    identityFile: z.string().required(), knownHostsFile: z.string().required(),
-    port: z.number().min(1).max(65535).step(1).default(22), sshExecutable: z.string().default('ssh'),
-  }).required(),
+    host: z.string(), account: z.string(), identityFile: z.string(), knownHostsFile: z.string(),
+    port: z.number().min(1).max(65535).step(1), sshExecutable: z.string(),
+  }),
 });
 
 /** Independent adapter: no history-length heuristics, fresh-session fallback, or remote auxiliary prompts. */
@@ -64,8 +64,15 @@ export class MemberAdapter extends LlmAdapter {
   }
 }
 
-export function apply(ctx, config) {
-  if (!config?.databasePath || !config.serviceId || !config.ssh) throw new AccessError(-32602, 'Preconfigured connection and separate client metadata database required');
+export function apply(ctx, input) {
+  const resolved = resolveMemberConfiguration(input);
+  const { config, ...status } = resolved;
+  ctx.provide('workbenchMemberStatus', Object.freeze(status));
+  if (resolved.state !== 'configured') {
+    ctx.logger?.warn?.(resolved.message);
+    return; // No database, adapter or SSH while deployment identity/connection is incomplete.
+  }
+  if (config.databasePath !== ':memory:') mkdirSync(dirname(config.databasePath), { recursive: true });
   const client = new MemberClient({ connect: () => openSsh(config.ssh), databasePath: config.databasePath, serviceId: config.serviceId, account: config.ssh.account,
     // Recovery snapshot is visible as a local plugin notice, never resubmitted as user input.
     onHistory: ({ localId, events, status }) => {

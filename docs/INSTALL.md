@@ -1,53 +1,74 @@
-# 客户端安装与预配置
+# 客户端安装与连接配置
 
-## 边界
+## 先区分安装、启用和连通
 
-本项目是 DSH host-side Cordis 插件，不是新 Web 应用。客户端 **0.1.1** 明确适配 **DSH 0.2.0-rc.2 / Cordis 4.0.4 / Schemastery 3.18.4**；已验证本机实际安装器接受与宿主官方接口集成。GUI 渲染和真实 SSH 仍未验收，不将安装成功当作完整业务连通。
+客户端 **0.1.2** 对应 **DSH 0.2.0-rc.2 / Cordis4.0.4 / Schemastery3.18.4**。
 
-如果 GUI 提示 `dsh-collaboration-client@0.1.0 ... 要求 0.1.5-rc.2`：旧包的约束不是当前宿主版本。请选择修正后的本地目录或新生成的 0.1.1 tarball 重试，不再使用旧 tarball，也不要点击允许不兼容版本。服务端无须为此升级。
+- 0.1.0 因过旧 peer 约束被当前安装器拒绝；不要使用版本豁免绕过。
+- 0.1.1 安装成功但直接启用空配置会报 `serviceId missing required value`。
+- 0.1.2 空配置启用进入**待配置**状态，不变成异常组件；不创建数据库、不注册业务模型、不发起 SSH。
+- 安装/待配置不等于已经连接服务器；真实 GUI 渲染、SSH 身份及业务连通仍需验收。
 
-插件使用独立成员 SSH 密钥，服务器地址、账号和 known_hosts 由部署人员配置。服务器指纹必须通过可信渠道核对，不使用自动跳过检查或首次无条件接受。
+本插件尚无浏览器配置表单；不要寻找不存在的“配置”按钮。通过成员自己的 JSON 文件配置，无须改现用 profile。服务端签名密钥不能放进客户端。
 
-## 打包与隔离安装
+## Windows 最短配置步骤
 
-```sh
-pnpm install --frozen-lockfile --ignore-scripts
-pnpm run check
-pnpm pack --out .dsh/dsh-collaboration-client.tgz
-# 只在准备好的隔离 profile 中执行，禁止直接改现用 profile：
-dsh plugin --profile collaboration-client-test add /absolute/dsh-collaboration-client.tgz
+1. 安装修正版0.1.2。
+2. 将[空配置模板](../examples/client-config.example.json)复制为 `%USERPROFILE%\.dsh\collaboration-client.json`（本机对应 `C:\Users\cjh13\.dsh\collaboration-client.json`）。**若目标已存在先阅读，不要覆盖。**
+3. 填写部署人员提供的真实信息：
+
+| 字段 | 填写内容 |
+|---|---|
+| serviceId | 服务端配置的 serviceId，必须一致 |
+| databasePath | 客户端私有状态库绝对路径，不是服务端业务库；父目录由配置完成后的插件创建 |
+| ssh.host | 实际 SSH 主机名/IP |
+| ssh.account | 实际独立 SSH 登录账号，不是 GUI 昵称或项目角色 |
+| ssh.port | SSH 端口，通常22，以服务器配置为准 |
+| ssh.identityFile | 本机成员 SSH 私钥文件的绝对路径，只填路径、不填密钥正文 |
+| ssh.knownHostsFile | 已通过可信渠道核对服务器指纹的 known_hosts 绝对路径 |
+
+Windows JSON 路径可以使用 `C:/Users/...`，或把反斜杠写成 `\\`。模板中的空字符串必须替换；本仓没有真实服务器地址和账号，不能用示例假装已连通。
+
+4. 用 Node24 配置检查，不会建库或连网：
+
+```powershell
+node scripts/check-config.mjs "$env:USERPROFILE\.dsh\collaboration-client.json"
 ```
 
-[包配置](../package.json)声明 main/exports/dsh bundle；[bundle patch](../cordis.patch.yml)默认 disabled，空配置不会连接服务器。安装后通过隔离 profile 的覆盖 patch 提供完整 config 并 `disabled:false`。示意（不要将真实密钥或数据库提交 Git）：
+退出0 / `configured` 只证明字段和 SSH 参数格式完整，**不证明私钥、host key、网络或服务器可用**。
+
+5. 在插件页关闭再打开“collaboration-client”组件，让它重新读取文件。需要时重启 DSH。配置完整后才注册 provider/model `workbench-remote/server-agent`；在本地会话选择它后，首次业务消息才发起连接。
+
+如果还看到 `serviceId missing required value`，说明正在运行旧0.1.1副本；重新安装0.1.2并重新加载组件。0.1.2 未配置时会给出带路径的中文待配置日志，不会伪装“已连接”。
+
+## 自定义路径与部署覆盖
+
+默认路径为用户 `.dsh/collaboration-client.json`。启动环境可指定 `DSH_COLLABORATION_CLIENT_CONFIG`；已启用组件支持只给 configFile 的 profile overlay：
 
 ```yaml
 - id: collaboration-client
   disabled: false
   config:
-    provider: workbench-remote
-    model: server-agent
-    serviceId: workbench-test
-    databasePath: /absolute/client-state/client.sqlite
-    ssh:
-      host: server.example
-      account: alice
-      port: 22
-      identityFile: /absolute/client/key
-      knownHostsFile: /absolute/client/known_hosts
+    configFile: /absolute/member-client.json
 ```
 
-profile patch 语法必须以部署使用的 DSH loader 实际配置为准。修复在独立 `collaboration-compat-*` profile 验证安装，不修改现用 desktop 配置。本轮没有启动替代 Web 服务，没有运行 GUI profile；插件默认 disabled，配置并启用后才能连接业务服务。
+完整内联 config 仍可使用，但不要同时填写 configFile 与内联连接字段，也不要部分填写后指望从默认文件拼接身份。配置切换后重新挂载；不同账号/serviceId 不共用客户端状态库。
 
-Windows 可复跑真实安装检查（脚本拒绝 desktop/acp profile 名称）：
+provider/model 可在 JSON 中自定义；默认分别为 workbench-remote/server-agent。这不是客户端业务模型，实际模型和工具执行在服务器。严格 host key、key-only、禁止转发与固定远端 `workbench-connect` 不可移除。
+
+## 开发、打包与隔离验收
+
+```sh
+pnpm install --frozen-lockfile --ignore-scripts
+pnpm run check
+pnpm pack --out .dsh/dsh-collaboration-client-0.1.2.tgz
+node scripts/check-package.mjs .dsh/dsh-collaboration-client-0.1.2.tgz
+```
+
+[包配置](../package.json)和[bundle patch](../cordis.patch.yml)默认 disabled，安装不会自动连接。[隔离安装检查](../scripts/check-install.ps1)只允许专用 profile：
 
 ```powershell
-./scripts/check-install.ps1 -Cli 'C:\path\to\dsh.cmd' -Package 'C:\absolute\dsh-collaboration-client-0.1.1.tgz'
+./scripts/check-install.ps1 -Cli 'C:\path\to\dsh.cmd' -Package 'C:\absolute\dsh-collaboration-client-0.1.2.tgz'
 ```
 
-父目录需预先存在；`databasePath` 为客户端自己的状态库。绝对 identityFile/knownHostsFile、key-only、BatchMode、StrictHostKeyChecking 与禁止 agent/端口转发不可移除。服务端 forced command 固定 `workbench-connect`，它是轻量连接器，不启动第二套 DSH。
-
-## 使用
-
-在本地会话选择 provider/model `workbench-remote/server-agent`。业务工具和模型决策在服务端；本地的工具定义、系统上下文、旧历史不被转发。图片和文件传输不在当前范围。
-
-自动重连仅恢复连接和本人会话；上一轮结果未知时，先阅读恢复记录再明确发新消息，不自动“再执行一次”。详见[恢复行为](RECOVERY.md)。
+本轮不替用户填正式配置、不修改 desktop profile、不启动替代 Web 服务。恢复行为见[恢复规则](RECOVERY.md)。

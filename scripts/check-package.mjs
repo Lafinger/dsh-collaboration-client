@@ -21,6 +21,11 @@ mkdirSync(join(root,'.dsh'),{recursive:true});const detached=mkdtempSync(join(ro
 assert.ok(entries.has('cordis.patch.yml'), 'DSH bundle patch missing');
 assert.equal(metadata.dsh?.bundle?.patch, 'cordis.patch.yml');
 assert.match(entries.get('cordis.patch.yml').toString('utf8'), /disabled:\s*true/);
+assert.ok(entries.has('src/configuration.mjs'));
+assert.ok(entries.has('scripts/check-config.mjs'));
+assert.ok(entries.has('examples/client-config.example.json'));
+const example = JSON.parse(entries.get('examples/client-config.example.json').toString('utf8'));
+assert.equal(example.serviceId, ''); assert.equal(example.ssh.host, '');
 const smoke=metadata.name==='dsh-collaboration-client'
  ? 'const m=await import('+JSON.stringify(pathToFileURL(join(detached,'src/member-plugin.mjs')).href)+');if(typeof m.apply!=="function"||typeof m.MemberAdapter!=="function")throw new Error("Missing plugin exports");'
  : 'const m=await import('+JSON.stringify(pathToFileURL(join(detached,'src/workbench-runtime.mjs')).href)+');const {runtime}=await m.createWorkbenchRuntime({workspace:'+JSON.stringify(join(detached,'.state/workspace'))+',stateRoot:'+JSON.stringify(join(detached,'.state/data'))+',fixture:true});await runtime.closeAll();';
