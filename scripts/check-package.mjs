@@ -20,7 +20,7 @@ for(const [name,bytes]of entries){if(!name.endsWith('.mjs')&&!name.endsWith('.js
 mkdirSync(join(root,'.dsh'),{recursive:true});const detached=mkdtempSync(join(root,'.dsh/packed-'));for(const[name,bytes]of entries){const target=join(detached,name);mkdirSync(dirname(target),{recursive:true});writeFileSync(target,bytes);}
 assert.equal(metadata.license, 'MIT', 'Package must declare the approved MIT license');
 assert.ok(entries.has('LICENSE'), 'License text missing from distributable');
-assert.match(entries.get('LICENSE').toString('utf8'), /^MIT License\n/);
+assert.match(entries.get('LICENSE').toString('utf8'), /^MIT License\r?\n/);
 assert.ok(entries.has('cordis.patch.yml'), 'DSH bundle patch missing');
 assert.equal(metadata.dsh?.bundle?.patch, 'cordis.patch.yml');
 assert.match(entries.get('cordis.patch.yml').toString('utf8'), /disabled:\s*true/);
