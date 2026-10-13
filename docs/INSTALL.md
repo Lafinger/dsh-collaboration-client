@@ -2,7 +2,7 @@
 
 ## 安装、配置、连通是三件事
 
-客户端 **0.2.0** 对应服务端 **0.3.0**，宿主精确 **DSH0.2.0-rc.2 / Cordis4.0.4 / Schemastery3.18.4**。通信使用[协作扩展协议v2](PROTOCOL-v2.json)，基础ACP-shaped版本仍1；客户端、connector、服务器均拒绝缺失/旧/错误协作版本，不自动降级或业务重放。
+客户端 **0.2.1** 对应服务端 **0.3.0**，宿主精确 **DSH0.2.1-rc.2 / Cordis4.0.4 / Schemastery3.18.4**。通信使用[协作扩展协议v2](PROTOCOL-v2.json)，基础ACP-shaped版本仍1；客户端、connector、服务器均拒绝缺失/旧/错误协作版本，不自动降级或业务重放。
 
 插件默认禁用；空配置启用安全进入待配置，不建库、不注册远端模型、不发SSH。没有浏览器配置表单；只配置成员自己的JSON，不能加入服务端签名秘密或模型API Key。
 
@@ -11,7 +11,7 @@
 1. 在DSH插件管理器安装：
 
    ```text
-   github:Lafinger/dsh-collaboration-client#v0.2.0
+   github:Lafinger/dsh-collaboration-client#v0.2.1
    ```
 
    默认分支来源也支持，但不会自动选择最新Release；详见[发布说明](RELEASE.md)。
@@ -82,8 +82,8 @@ provider/model可自定义，默认collaboration-remote/server-agent；严格hos
 ```sh
 pnpm install --frozen-lockfile --ignore-scripts
 pnpm run check
-pnpm pack --out .dsh/dsh-collaboration-client-0.2.0.tgz
-node scripts/check-package.mjs .dsh/dsh-collaboration-client-0.2.0.tgz
+pnpm pack --out .dsh/dsh-collaboration-client-0.2.1.tgz
+node scripts/check-package.mjs .dsh/dsh-collaboration-client-0.2.1.tgz
 ```
 
 [包配置](../package.json)、[bundle patch](../cordis.patch.yml)默认disabled；[隔离安装检查](../scripts/check-install.ps1)只允许专用profile，不修改现用desktop/acp或启动替代Web服务。恢复语义见[恢复规则](RECOVERY.md)。历史0.1.x安装证据见[旧版验收](GITHUB-RELEASE-VERIFY.md)，不是新版通过的证明。

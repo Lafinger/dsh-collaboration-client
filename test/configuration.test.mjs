@@ -21,6 +21,16 @@ test('default config is user-owned plugin directory and never falls back to lega
   result=spawnSync(process.execPath,['--input-type=module','-e',code.replace("'configuration-required'","'configured'")],{stdio:'inherit',env:{...process.env,HOME:root,USERPROFILE:root}});
   assert.equal(result.status,0);
 });
+test('explicit file overrides environment; environment overrides default; inline stays independent',()=>{
+ const root=mkdtempSync(join(tmpdir(),'collab-env-'));const file=join(root,'override.json');writeFileSync(file,JSON.stringify(fixture(root)));
+ const missing=join(root,'missing.json');const env={DSH_COLLABORATION_CLIENT_CONFIG:file};
+ assert.equal(resolveMemberConfiguration({},{fallbackPath:missing,env}).state,'configured');
+ assert.equal(resolveMemberConfiguration({configFile:missing},{env}).state,'configuration-required');
+ assert.equal(resolveMemberConfiguration(fixture(root),{env:{DSH_COLLABORATION_CLIENT_CONFIG:missing}}).state,'configured');
+ assert.equal(resolveMemberConfiguration({},{fallbackPath:file,env:{DSH_COLLABORATION_CLIENT_CONFIG:'relative.json'}}).state,'configuration-required');
+ assert.equal(resolveMemberConfiguration({},{fallbackPath:file,env:{DSH_COLLABORATION_CLIENT_CONFIG:''}}).state,'configured');
+ assert.equal(existsSync(fixture(root).databasePath),false);
+});
 test('missing configuration does not create files or use guessed endpoint', () => {
   const root = mkdtempSync(join(tmpdir(), 'collab-config-')), file = join(root, 'missing.json');
   const status = resolveMemberConfiguration({}, { fallbackPath: file });

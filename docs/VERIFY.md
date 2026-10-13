@@ -1,6 +1,10 @@
 # 客户端验证
 
-## 0.2.0命名与协作协议v2（本地验证）
+## 0.2.1显式环境覆盖修复
+
+最终检查发现旧解析器文档宣称支持DSH_COLLABORATION_CLIENT_CONFIG但未实际读取。本轮用新patch修复，不覆盖已公开0.2.0。优先级configFile > 环境 > 新默认目录；完整inline独立使用，不与环境文件拼接，非法相对环境路径安全待配置。新增回归，本地26单元+6集成与21文件抽取包PASS，仍协作v2/服务端0.3.0。此patch不修改用户配置、不迁移身份、不调用模型；正式CI/Release证据随后追加。
+
+## 0.2.0命名与协作协议v2（已发布历史）
 
 - 全部当前英文标识、服务名称及SSH固定命令已统一；显示名协作服务，默认provider collaboration-remote。
 - 新默认配置home/.dsh/dsh-collaboration-client/collaboration-client.json；子进程隔离home回归证明旧根目录文件不回退，新目录带BOM JSON正常加载，不写真实用户配置。

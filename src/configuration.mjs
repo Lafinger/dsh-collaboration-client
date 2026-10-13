@@ -9,8 +9,8 @@ const text = value => typeof value === 'string' && value.trim().length > 0;
 const get = (value, key) => key.split('.').reduce((node, part) => node?.[part], value);
 
 /** Missing deployment configuration is a safe state, never permission to guess an endpoint. */
-export function resolveMemberConfiguration(input = {}, { fallbackPath = defaultConfigPath() } = {}) {
-  const filePath = text(input.configFile) ? input.configFile : fallbackPath;
+export function resolveMemberConfiguration(input = {}, { fallbackPath = defaultConfigPath(), env = process.env } = {}) {
+  const filePath = text(input.configFile) ? input.configFile : text(env.DSH_COLLABORATION_CLIENT_CONFIG) ? env.DSH_COLLABORATION_CLIENT_CONFIG : fallbackPath;
   const pending = (missing, issue) => ({ state: 'configuration-required', missing, issue, configPath: filePath,
     message: `协作客户端待配置：${issue ?? `缺少 ${missing.join('、')}`}。请填写客户端 JSON 配置 ${filePath}，检查后重新启用组件；尚未连接服务器。` });
   const inline = required.some(key => text(get(input, key)));
