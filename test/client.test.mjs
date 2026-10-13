@@ -15,7 +15,7 @@ function setup(t, options = {}) {
 test('SSH connection is key-only, strict-host-checked, shell-free, and fixed remote command', () => {
   const args = sshArguments({ host: 'server.example', account: 'alice', identityFile: join(tmpdir(), 'key'), knownHostsFile: join(tmpdir(), 'known_hosts') });
   for (const option of ['StrictHostKeyChecking=yes','BatchMode=yes','PasswordAuthentication=no','ForwardAgent=no','ClearAllForwardings=yes']) assert.ok(args.includes(option));
-  assert.equal(args.at(-1), 'workbench-connect'); assert.throws(() => sshArguments({ host: 'x;command', account: 'alice' }), /Invalid/);
+  assert.equal(args.at(-1), 'collaboration-connect'); assert.throws(() => sshArguments({ host: 'x;command', account: 'alice' }), /Invalid/);
 });
 test('identity/service mismatch fails before creating remote conversation', async t => {
   const { client,service } = setup(t, { connect: async () => service.connect({ account: 'bob' }) });

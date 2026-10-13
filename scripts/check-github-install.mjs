@@ -23,7 +23,7 @@ import * as plugin from 'dsh-collaboration-client';
 const metadata=JSON.parse(readFileSync(new URL('./node_modules/dsh-collaboration-client/package.json',import.meta.url),'utf8'));
 assert.equal(metadata.version,${JSON.stringify(expected.version)});assert.equal(metadata.dsh.bundle.patch,'cordis.patch.yml');
 const ctx=new Context(),llm=ctx.plugin(LlmRuntime);await llm.await();
-try{const entry=ctx.plugin(plugin,{configFile:${JSON.stringify(join(directory, 'missing-client.json'))}});await entry.await();assert.equal(entry.ctx.get('workbenchMemberStatus').state,'configuration-required');assert.equal(entry.ctx.get('workbenchMemberClient'),undefined);assert.equal(ctx.llm.listProviders().some(p=>p.id==='workbench-remote'),false);}finally{await ctx.fiber.dispose();}
+try{const entry=ctx.plugin(plugin,{configFile:${JSON.stringify(join(directory, 'missing-client.json'))}});await entry.await();assert.equal(entry.ctx.get('collaborationMemberStatus').state,'configuration-required');assert.equal(entry.ctx.get('collaborationMemberClient'),undefined);assert.equal(ctx.llm.listProviders().some(p=>p.id==='collaboration-remote'),false);}finally{await ctx.fiber.dispose();}
 console.log(JSON.stringify({githubSource:${JSON.stringify(spec)},version:metadata.version,isolatedMount:'PASS',lifecycleBuildRequired:false,sshStarted:false}));`;
 const file = join(directory, 'smoke.mjs'); writeFileSync(file, source);
 result = spawnSync(process.execPath, [file], { cwd: directory, stdio: 'inherit' });

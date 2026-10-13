@@ -1,10 +1,26 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, writeFileSync, existsSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { tmpdir, homedir } from 'node:os';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
+import { resolve } from 'node:path';
 import { join } from 'node:path';
-import { resolveMemberConfiguration } from '../src/configuration.mjs';
+import { resolveMemberConfiguration, defaultConfigPath } from '../src/configuration.mjs';
 const fixture = root => ({ serviceId: 'fixture', databasePath: join(root, 'state/client.sqlite'), ssh: { host: 'example.test', account: 'alice', identityFile: join(root, 'key'), knownHostsFile: join(root, 'known_hosts') } });
+test('default config is user-owned plugin directory and never falls back to legacy root file', () => {
+  assert.equal(defaultConfigPath(), join(homedir(), '.dsh', 'dsh-collaboration-client', 'collaboration-client.json'));
+  const root = mkdtempSync(join(tmpdir(), 'collab-home-'));
+  mkdirSync(join(root, '.dsh')); writeFileSync(join(root, '.dsh', 'collaboration-client.json'), JSON.stringify(fixture(root)));
+  const module = pathToFileURL(resolve('src/configuration.mjs')).href;
+  const code = `import assert from 'node:assert/strict';import{resolveMemberConfiguration,defaultConfigPath}from ${JSON.stringify(module)};const r=resolveMemberConfiguration();assert.equal(r.state,'configuration-required');assert.equal(r.configPath,defaultConfigPath());`;
+  let result=spawnSync(process.execPath,['--input-type=module','-e',code],{stdio:'inherit',env:{...process.env,HOME:root,USERPROFILE:root}});
+  assert.equal(result.status,0);
+  const dir=join(root,'.dsh','dsh-collaboration-client');mkdirSync(dir);writeFileSync(join(dir,'collaboration-client.json'),'\uFEFF'+JSON.stringify(fixture(root)));
+  result=spawnSync(process.execPath,['--input-type=module','-e',code.replace("'configuration-required'","'configured'")],{stdio:'inherit',env:{...process.env,HOME:root,USERPROFILE:root}});
+  assert.equal(result.status,0);
+});
 test('missing configuration does not create files or use guessed endpoint', () => {
   const root = mkdtempSync(join(tmpdir(), 'collab-config-')), file = join(root, 'missing.json');
   const status = resolveMemberConfiguration({}, { fallbackPath: file });

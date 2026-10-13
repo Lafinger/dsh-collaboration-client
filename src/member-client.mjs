@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 import { createHash } from 'node:crypto';
-import { AccessError, requireText } from './protocol.mjs';
+import { AccessError, requireText, initializeParams, requireInitializeResult } from './protocol.mjs';
 
 /** Per-client durable mapping; failure is fail-closed, never an optimization-only cache. */
 export class MemberClient {
@@ -25,8 +25,9 @@ export class MemberClient {
           if (m.id !== undefined) { peer.error(m.id, new AccessError(-32601, 'Reverse client methods are unsupported')); return; }
           if (m.method === 'session/update') this.listeners.get(m.params?.sessionId)?.(m.params);
         });
-        await peer.request('initialize', { protocolVersion: 1, clientCapabilities: {} });
-        const identity = await peer.request('workbench/whoami', {});
+        const initialized = await peer.request('initialize', initializeParams());
+        requireInitializeResult(initialized);
+        const identity = await peer.request('collaboration/whoami', {});
         if (identity.account !== this.account || identity.serviceId !== this.serviceId) throw new AccessError(-32003, 'Connected identity/service differs from configured entry');
         if (this.stopped || peer.closed) throw new AccessError(-32001, 'Member client closed during connection');
         this.peer = peer; this.attached.clear(); this.reconnectAttempt = 0;
@@ -58,7 +59,7 @@ export class MemberClient {
       await peer.request('session/load', { sessionId: row.remote_id });
       this.attached.add(row.remote_id);
     }
-    const history = await peer.request('workbench/history', { sessionId: row.remote_id, after: Number(row.cursor) });
+    const history = await peer.request('collaboration/history', { sessionId: row.remote_id, after: Number(row.cursor) });
     if (history.events.length) {
       await this.onHistory?.({ localId, sessionId: row.remote_id, ...history });
       this.advance(localId, history.events.at(-1).seq);

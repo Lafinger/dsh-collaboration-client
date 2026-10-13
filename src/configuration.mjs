@@ -3,7 +3,7 @@ import { homedir } from 'node:os';
 import { join, isAbsolute } from 'node:path';
 import { sshArguments } from './ssh.mjs';
 
-export const defaultConfigPath = () => join(homedir(), '.dsh', 'collaboration-client.json');
+export const defaultConfigPath = () => join(homedir(), '.dsh', 'dsh-collaboration-client', 'collaboration-client.json');
 const required = ['serviceId', 'databasePath', 'ssh.host', 'ssh.account', 'ssh.identityFile', 'ssh.knownHostsFile'];
 const text = value => typeof value === 'string' && value.trim().length > 0;
 const get = (value, key) => key.split('.').reduce((node, part) => node?.[part], value);
@@ -36,7 +36,7 @@ export function resolveMemberConfiguration(input = {}, { fallbackPath = defaultC
   if (value.serviceId.length > 200 || value.ssh.account.length > 200) return pending([], '服务或账号标识过长');
   if (value.databasePath !== ':memory:' && !isAbsolute(value.databasePath)) return pending([], 'databasePath 必须为绝对路径');
   try { sshArguments(value.ssh); } catch { return pending([], 'SSH 参数无效；请检查主机、账号、端口及密钥/known_hosts 绝对路径'); }
-  const provider = input.provider ?? value.provider ?? 'workbench-remote', model = input.model ?? value.model ?? 'server-agent';
+  const provider = input.provider ?? value.provider ?? 'collaboration-remote', model = input.model ?? value.model ?? 'server-agent';
   if (!text(provider) || !text(model)) return pending([], 'provider/model 必须为非空文本');
   const config = { ...value, provider, model };
   return { state: 'configured', config, configPath: inline ? null : filePath,

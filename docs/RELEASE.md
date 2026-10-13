@@ -32,14 +32,14 @@ github:Lafinger/dsh-collaboration-client
 这会安装默认分支代码，不自动选择最新 Release。正式使用建议固定版本：
 
 ```text
-github:Lafinger/dsh-collaboration-client#v0.1.2
+github:Lafinger/dsh-collaboration-client#v0.2.0
 ```
 
 隔离 CLI 验证示意：
 
 ```sh
 dsh plugin --profile collaboration-compat-github add github:Lafinger/dsh-collaboration-client --ignore-scripts
-dsh plugin --profile collaboration-compat-github-tag add github:Lafinger/dsh-collaboration-client#v0.1.2 --ignore-scripts
+dsh plugin --profile collaboration-compat-github-tag add github:Lafinger/dsh-collaboration-client#v0.2.0 --ignore-scripts
 ```
 
 还可在[Releases](https://github.com/Lafinger/dsh-collaboration-client/releases)下载 `.tgz`，核对 SHA256SUMS 后安装。main移到新提交不改变已固定的tag；版本tag/附件不得移动或覆盖。
@@ -56,11 +56,11 @@ dsh plugin --profile collaboration-compat-github-tag add github:Lafinger/dsh-col
 4. 创建带注释的版本tag，push tag：
 
 ```sh
-git tag -a v0.1.3 -m "Release v0.1.3"
-git push origin v0.1.3
+git tag -a v0.2.1 -m "Release v0.2.1"
+git push origin v0.2.1
 ```
 
-这里0.1.3仅是下次示例，必须和package.version相同。不能只改标签不升包版本。带rc/beta等版本自动标prerelease，普通版本设为latest。
+这里0.2.1仅是下次示例，必须和package.version相同。不能只改标签不升包版本。带rc/beta等版本自动标prerelease，普通版本设为latest。
 
 5. 检查GitHub Actions结果和Release附件，再在独立环境安装固定tag。
 
@@ -79,7 +79,7 @@ pnpm run check
 pnpm pack --out .dsh/dsh-collaboration-client.tgz
 node scripts/check-package.mjs .dsh/dsh-collaboration-client.tgz
 pnpm run install:check github:Lafinger/dsh-collaboration-client
-pnpm run install:check github:Lafinger/dsh-collaboration-client#v0.1.2
+pnpm run install:check github:Lafinger/dsh-collaboration-client#v0.2.0
 ```
 
 GitHub来源验证需要网络，单独运行，不让普通离线check依赖远端状态。真正DSH安装验证只用专用profile，不写desktop/acp。联合服务端验收仍独立，CI不依赖兄弟仓库。

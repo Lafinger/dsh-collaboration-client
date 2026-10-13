@@ -31,7 +31,7 @@ const example = JSON.parse(entries.get('examples/client-config.example.json').to
 assert.equal(example.serviceId, ''); assert.equal(example.ssh.host, '');
 const smoke=metadata.name==='dsh-collaboration-client'
  ? 'const m=await import('+JSON.stringify(pathToFileURL(join(detached,'src/member-plugin.mjs')).href)+');if(typeof m.apply!=="function"||typeof m.MemberAdapter!=="function")throw new Error("Missing plugin exports");'
- : 'const m=await import('+JSON.stringify(pathToFileURL(join(detached,'src/workbench-runtime.mjs')).href)+');const {runtime}=await m.createWorkbenchRuntime({workspace:'+JSON.stringify(join(detached,'.state/workspace'))+',stateRoot:'+JSON.stringify(join(detached,'.state/data'))+',fixture:true});await runtime.closeAll();';
+ : 'const m=await import('+JSON.stringify(pathToFileURL(join(detached,'src/collaboration-runtime.mjs')).href)+');const {runtime}=await m.createCollaborationRuntime({workspace:'+JSON.stringify(join(detached,'.state/workspace'))+',stateRoot:'+JSON.stringify(join(detached,'.state/data'))+',fixture:true});await runtime.closeAll();';
 // Detached source uses this project installed dependencies through normal Node resolution.
 const code=smoke;
 const result=spawnSync(process.execPath,['--input-type=module','-e',code],{cwd:detached,stdio:'inherit'});if(result.error)throw result.error;assert.equal(result.status,0,'Detached package smoke failed');console.log(JSON.stringify({package:metadata.name,files:entries.size,detachedPackageSmoke:'PASS',oldRepositoryUsed:false,fixtureOnly:true}));

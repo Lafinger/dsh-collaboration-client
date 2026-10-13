@@ -13,7 +13,7 @@ export function sshArguments(config) {
     '-o', 'IdentitiesOnly=yes', '-o', 'PreferredAuthentications=publickey', '-o', 'PasswordAuthentication=no',
     '-o', 'KbdInteractiveAuthentication=no', '-o', 'ForwardAgent=no', '-o', 'ClearAllForwardings=yes',
     '-o', 'ServerAliveInterval=10', '-o', 'ServerAliveCountMax=2', '-o', 'ConnectTimeout=15',
-    '-i', config.identityFile, config.host, 'workbench-connect'];
+    '-i', config.identityFile, config.host, 'collaboration-connect'];
 }
 export async function openSsh(config, { spawnProcess = spawn } = {}) {
   const child = spawnProcess(config.sshExecutable ?? 'ssh', sshArguments(config), { stdio: ['pipe', 'pipe', 'inherit'], windowsHide: true, shell: false });

@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import { AccessError } from '../../src/protocol.mjs';
+import { AccessError, collaborationMeta, requireCollaborationVersion } from '../../src/protocol.mjs';
 
 // Client contract fixture only; no server source, signing credentials, business tools or Agent runtime.
 export class FakeService {
@@ -11,8 +11,12 @@ export class FakeService {
       attached = new Set();
       async request(method, params) {
         if (this.closed) throw new AccessError(-32001, 'Connection closed');
-        if (method === 'initialize') return { protocolVersion: 1 };
-        if (method === 'workbench/whoami') return { account, serviceId };
+        if (method === 'initialize') {
+          requireCollaborationVersion(params);
+          if(params.protocolVersion!==1)throw new AccessError(-32011,'Unsupported base protocol');
+          return { protocolVersion: 1, _meta: collaborationMeta() };
+        }
+        if (method === 'collaboration/whoami') return { account, serviceId };
         if (method === 'session/new') {
           const id = `remote-${service.next++}`; service.opens++;
           service.sessions.set(id, { owner: account, events: [], status: null, connection: this }); this.attached.add(id); return { sessionId: id };
@@ -23,7 +27,7 @@ export class FakeService {
           if (session.connection && session.connection !== this && !session.connection.closed) throw new AccessError(-32007, 'Session already attached');
           session.connection = this; this.attached.add(params.sessionId); return {};
         }
-        if (method === 'workbench/history') return { events: session.events.filter(e => e.seq > params.after), status: session.status };
+        if (method === 'collaboration/history') return { events: session.events.filter(e => e.seq > params.after), status: session.status };
         if (method === 'session/close') { session.connection = null; this.attached.delete(params.sessionId); return {}; }
         if (method === 'session/prompt') {
           service.prompts.push(params); session.status = { state: 'completed', requestId: params._meta.requestId };

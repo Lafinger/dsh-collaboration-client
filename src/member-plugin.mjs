@@ -9,7 +9,7 @@ import { resolveMemberConfiguration } from './configuration.mjs';
 export const name = 'collaboration-client';
 export const inject = ['llm'];
 export const Config = z.object({
-  configFile: z.string().description('客户端 JSON 配置的绝对路径；未指定时读取用户 .dsh/collaboration-client.json。'),
+  configFile: z.string().description('客户端 JSON 配置的绝对路径；未指定时读取当前用户 .dsh/dsh-collaboration-client/collaboration-client.json，不回退旧路径。'),
   provider: z.string(), model: z.string(),
   serviceId: z.string(), databasePath: z.string(),
   ssh: z.object({
@@ -20,15 +20,15 @@ export const Config = z.object({
 
 /** Independent adapter: no history-length heuristics, fresh-session fallback, or remote auxiliary prompts. */
 export class MemberAdapter extends LlmAdapter {
-  constructor(client, { provider = 'workbench-remote', model = 'server-agent' } = {}) {
+  constructor(client, { provider = 'collaboration-remote', model = 'server-agent' } = {}) {
     super(); this.client = client; this.provider = provider; this.model = model;
   }
   providerRetryPolicy() { return { mode: 'normal', maxRetries: 0, retryableCodes: [], initialDelayMs: 0, maxDelayMs: 0, jitterRatio: 0 }; }
-  async listModels() { return [{ provider: this.provider, id: this.model, name: '项目工作台服务', inputModalities: ['text'], outputModalities: ['text'] }]; }
+  async listModels() { return [{ provider: this.provider, id: this.model, name: '协作服务', inputModalities: ['text'], outputModalities: ['text'] }]; }
   async *stream(options) {
-    const finishError = error => ({ type: 'finish', reason: { kind: 'error', failure: { code: 'WORKBENCH_NO_REPLAY', message: error.message } } });
+    const finishError = error => ({ type: 'finish', reason: { kind: 'error', failure: { code: 'COLLABORATION_NO_REPLAY', message: error.message } } });
     if (options.purpose === 'session-title') {
-      const text = options.messages.filter(m => m.role === 'user' && m.source?.kind === 'user').flatMap(m => m.content.filter(b => b.type === 'text').map(b => b.text)).at(-1)?.slice(0, 40) ?? '项目工作台';
+      const text = options.messages.filter(m => m.role === 'user' && m.source?.kind === 'user').flatMap(m => m.content.filter(b => b.type === 'text').map(b => b.text)).at(-1)?.slice(0, 40) ?? '协作服务';
       yield { type: 'block-start', index: 0, blockType: 'text' }; yield { type: 'text-delta', index: 0, text };
       yield { type: 'block-end', index: 0, block: { type: 'text', text } }; yield { type: 'finish', reason: { kind: 'stop' } }; return;
     }
@@ -67,7 +67,7 @@ export class MemberAdapter extends LlmAdapter {
 export function apply(ctx, input) {
   const resolved = resolveMemberConfiguration(input);
   const { config, ...status } = resolved;
-  ctx.provide('workbenchMemberStatus', Object.freeze(status));
+  ctx.provide('collaborationMemberStatus', Object.freeze(status));
   if (resolved.state !== 'configured') {
     ctx.logger?.warn?.(resolved.message);
     return; // No database, adapter or SSH while deployment identity/connection is incomplete.
@@ -83,11 +83,11 @@ export function apply(ctx, input) {
           source: { kind: 'plugin', plugin: name, form: 'notice', summary: '远端会话恢复记录；未重新执行业务指令' } });
         agent.session.append('user/message', message, { surfaceOp: 'append' });
         // The source is plugin, not user: MemberAdapter never submits this snapshot as a command.
-        ctx.emit('workbench/recovery', { localId, events, status });
+        ctx.emit('collaboration/recovery', { localId, events, status });
       }
     },
   });
-  ctx.effect(() => ctx.llm.registerAdapter([config.provider ?? 'workbench-remote'], new MemberAdapter(client, config)));
+  ctx.effect(() => ctx.llm.registerAdapter([config.provider ?? 'collaboration-remote'], new MemberAdapter(client, config)));
   ctx.effect(() => () => client.close());
-  ctx.provide('workbenchMemberClient', client);
+  ctx.provide('collaborationMemberClient', client);
 }

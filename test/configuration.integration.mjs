@@ -14,9 +14,9 @@ test('JSON configuration activates actual plugin lazily and creates only its own
   const ctx = new Context(), llm = ctx.plugin(LlmRuntime); await llm.await();
   try {
     const entry = ctx.plugin(plugin, { configFile: file }); await entry.await();
-    assert.equal(entry.ctx.get('workbenchMemberStatus').state, 'configured');
-    const client = entry.ctx.get('workbenchMemberClient'); assert.ok(client); assert.equal(client.peer, null);
-    assert.ok(existsSync(databasePath)); assert.ok((await ctx.llm.listModels('workbench-remote')).some(model => model.id === 'server-agent'));
+    assert.equal(entry.ctx.get('collaborationMemberStatus').state, 'configured');
+    const client = entry.ctx.get('collaborationMemberClient'); assert.ok(client); assert.equal(client.peer, null);
+    assert.ok(existsSync(databasePath)); assert.ok((await ctx.llm.listModels('collaboration-remote')).some(model => model.id === 'server-agent'));
   } finally { await ctx.fiber.dispose(); }
 });
 
@@ -26,13 +26,13 @@ test('enabling installed bundle without deployment config stays pending, not Val
   try {
     // Missing required bundle fields; pin a nonexistent file so later user configuration cannot affect this regression.
     const configFile = join(mkdtempSync(join(tmpdir(), 'collab-empty-config-')), 'missing.json');
-    const entry = ctx.plugin(plugin, { configFile, provider: 'workbench-remote', model: 'server-agent', serviceId: undefined, databasePath: undefined,
+    const entry = ctx.plugin(plugin, { configFile, provider: 'collaboration-remote', model: 'server-agent', serviceId: undefined, databasePath: undefined,
       ssh: { host: undefined, account: undefined, identityFile: undefined, knownHostsFile: undefined } });
     await entry.await();
-    const status = entry.ctx.get('workbenchMemberStatus');
+    const status = entry.ctx.get('collaborationMemberStatus');
     assert.equal(status.state, 'configuration-required');
     assert.ok(status.missing.includes('serviceId'));
-    assert.equal(entry.ctx.get('workbenchMemberClient'), undefined);
-    assert.ok(!ctx.llm.listProviders().some(provider => provider.id === 'workbench-remote'));
+    assert.equal(entry.ctx.get('collaborationMemberClient'), undefined);
+    assert.ok(!ctx.llm.listProviders().some(provider => provider.id === 'collaboration-remote'));
   } finally { await ctx.fiber.dispose(); }
 });
