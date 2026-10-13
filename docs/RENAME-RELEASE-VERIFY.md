@@ -1,4 +1,16 @@
-# 客户端v0.2.0正式发布验收
+# 客户端最终v0.2.1与v0.2.0发布验收
+
+## 最终patch v0.2.1
+
+最终检查补齐显式DSH_COLLABORATION_CLIENT_CONFIG读取，优先级configFile > 环境 > 新默认路径；完整inline独立，不回退旧默认、不猜身份。v0.2.0仍保留不可变，本轮最终建议安装v0.2.1。
+
+- 发行提交ed1fc671a1322b927bc6ccbdd19bbf45bbf99fe6，带注释v0.2.1；[main双平台CI](https://github.com/Lafinger/dsh-collaboration-client/actions/runs/38340942080)、[tag CI/Release](https://github.com/Lafinger/dsh-collaboration-client/actions/runs/38341114914)success。
+- [公开v0.2.1](https://github.com/Lafinger/dsh-collaboration-client/releases/tag/v0.2.1)非draft/非prerelease，三附件齐全；下载包SHA256 8bd9cac5e4c28fca68827e8ff2dae18e7058ee1cf3d7e12ff4ac534ce56095e8，与release.json/SHA256SUMS/commit/tag一致。
+- 26单元+6集成+1联合契约PASS；服务器3联合、真实SSH版本负例/forced command/错误密钥/三地址再次PASS，未创建真实业务会话或调用模型，服务器仍全空daily/0请求。
+- 固定github:Lafinger/dsh-collaboration-client#v0.2.1隔离来源安装及真实官方ctx安全挂载PASS。下载21文件tarball抽取安全挂载PASS；真实DSH installer在collaboration-compat-rename-client-v021-release专用disabled profile接受，desktop/acp不改，无版本豁免。
+- Node默认fetch下载附件一度ConnectTimeout（无鉴权、非模型）；改用既有WindowsHTTP网络栈下载后hash/安装通过，无更改全局代理/TLS。
+
+## 以下为v0.2.0已发布记录（未改标签/附件）
 
 ## 提交与自动化
 

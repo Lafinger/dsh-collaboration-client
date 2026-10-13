@@ -2,7 +2,7 @@
 
 ## 0.2.1显式环境覆盖修复
 
-最终检查发现旧解析器文档宣称支持DSH_COLLABORATION_CLIENT_CONFIG但未实际读取。本轮用新patch修复，不覆盖已公开0.2.0。优先级configFile > 环境 > 新默认目录；完整inline独立使用，不与环境文件拼接，非法相对环境路径安全待配置。新增回归，本地26单元+6集成与21文件抽取包PASS，仍协作v2/服务端0.3.0。此patch不修改用户配置、不迁移身份、不调用模型；正式CI/Release证据随后追加。
+最终检查发现旧解析器文档宣称支持DSH_COLLABORATION_CLIENT_CONFIG但未实际读取。本轮用新patch修复，不覆盖已公开0.2.0。优先级configFile > 环境 > 新默认目录；完整inline独立使用，不与环境文件拼接，非法相对环境路径安全待配置。新增回归，本地26单元+6集成与21文件抽取包PASS，仍协作v2/服务端0.3.0。此patch不修改用户配置、不迁移身份、不调用模型；正式main/tag Windows+Ubuntu CI/Release、固定GitHub安装、下载hash核验及真实DSH installer均PASS，见[发行证据](RENAME-RELEASE-VERIFY.md)。
 
 ## 0.2.0命名与协作协议v2（已发布历史）
 
