@@ -30,7 +30,7 @@ github:Lafinger/dsh-collaboration-client
 
 ## 开发与检查
 
-客户端 **0.3.0** 对应宿主 **DSH 0.2.0-rc.2**，Cordis `4.0.4`、Schemastery `3.18.4`。要求 Node >=24、pnpm，使用本项目 lockfile 安装；旧客户端 0.1.0 的 0.1.5 peer 声明会被当前安装器正确拒绝，不应使用版本豁免绕过。对应服务端0.4.0，协作扩展协议v2（ACP-shaped基础版本1），附件扩展1双方严格协商，不兼容旧命名。图片支持传输归档不等于模型支持视觉分析。
+客户端 **0.3.0** 对应宿主 **DSH 0.2.0-rc.2**，Cordis `4.0.4`、Schemastery `3.18.4`。要求 Node >=24、pnpm，使用本项目 lockfile 安装；旧客户端 0.1.0 的 0.1.5 peer 声明会被当前安装器正确拒绝，不应使用版本豁免绕过。对应服务端0.4.1（0.4.0已发布但实际Word目录标记兼容性由0.4.1修复），协作扩展协议v2（ACP-shaped基础版本1），附件扩展1双方严格协商，不兼容旧命名。图片支持传输归档不等于模型支持视觉分析。
 
 ```sh
 pnpm install --frozen-lockfile --ignore-scripts
