@@ -1,10 +1,12 @@
 import { DatabaseSync } from 'node:sqlite';
 import { createHash } from 'node:crypto';
 import { AccessError, requireText, initializeParams, requireInitializeResult } from './protocol.mjs';
+import { attachmentCapability, requireAttachmentCapability } from './attachment-protocol.mjs';
 
 /** Per-client durable mapping; failure is fail-closed, never an optimization-only cache. */
 export class MemberClient {
-  constructor({ connect, databasePath, serviceId, account, onHistory }) {
+  constructor({ connect, databasePath, serviceId, account, onHistory, attachments }) {
+    this.attachments = attachments; this.attachmentCapability = null;
     this.connect = connect; this.serviceId = requireText(serviceId, 'serviceId', 200); this.account = requireText(account, 'account', 200);
     this.onHistory = onHistory; this.peer = null; this.connecting = null; this.attached = new Set(); this.listeners = new Map(); this.busy = new Set(); this.opening = new Map();
     this.stopped = false; this.reconnectTimer = null; this.reconnectAttempt = 0; this.lastRecoveryError = null;
@@ -20,13 +22,24 @@ export class MemberClient {
     if (this.connecting) return this.connecting;
     this.connecting = (async () => {
       const peer = await this.connect();
+      this.attachmentCapability = null;
       try {
         peer.on('message', m => {
-          if (m.id !== undefined) { peer.error(m.id, new AccessError(-32601, 'Reverse client methods are unsupported')); return; }
+          if (m.id !== undefined) {
+            try {
+              if (m.method !== 'collaboration/attachment/read' || !this.attachments || !this.attachmentCapability) throw new AccessError(-32601, 'Reverse client methods are unsupported');
+              peer.result(m.id, this.attachments.read(m.params ?? {}));
+            } catch (error) { peer.error(m.id, error); }
+            return;
+          }
           if (m.method === 'session/update') this.listeners.get(m.params?.sessionId)?.(m.params);
         });
-        const initialized = await peer.request('initialize', initializeParams());
+        const params = initializeParams();
+        if (this.attachments) params.clientCapabilities.attachmentTransfer = attachmentCapability();
+        const initialized = await peer.request('initialize', params);
         requireInitializeResult(initialized);
+        this.attachmentCapability = initialized.agentCapabilities?.attachmentTransfer ?? null;
+        if (this.attachmentCapability) requireAttachmentCapability(this.attachmentCapability);
         const identity = await peer.request('collaboration/whoami', {});
         if (identity.account !== this.account || identity.serviceId !== this.serviceId) throw new AccessError(-32003, 'Connected identity/service differs from configured entry');
         if (this.stopped || peer.closed) throw new AccessError(-32001, 'Member client closed during connection');
@@ -37,6 +50,7 @@ export class MemberClient {
     })().finally(() => { this.connecting = null; });
     return this.connecting;
   }
+  wasSubmitted(localId, messageId) { return !!this.db.prepare('SELECT 1 FROM client_submissions WHERE local_id=? AND message_id=?').get(localId, messageId); }
   mapping(localId) {
     const row = this.db.prepare('SELECT * FROM client_mapping WHERE local_id=?').get(localId);
     if (row && (row.service_id !== this.serviceId || row.account !== this.account)) throw new AccessError(-32003, 'Saved conversation belongs to a different account/service');
@@ -71,7 +85,7 @@ export class MemberClient {
     if (Number.isSafeInteger(seq)) this.db.prepare('UPDATE client_mapping SET cursor=MAX(cursor,?) WHERE local_id=?').run(seq, localId);
   }
   /** All submissions have stable identity; a previously attempted message must never run twice. */
-  async prompt(localId, { messageId, text, signal, onUpdate }) {
+  async prompt(localId, { messageId, text, signal, onUpdate, attachmentEntry }) {
     requireText(messageId, 'messageId', 200); requireText(text, 'user text', 256 * 1024);
     if (this.busy.has(localId)) throw new AccessError(-32007, 'Local conversation already running');
     const previous = this.db.prepare('SELECT state FROM client_submissions WHERE local_id=? AND message_id=?').get(localId, messageId);
@@ -81,6 +95,7 @@ export class MemberClient {
     try {
       ({ row, peer } = await this.open(localId));
       if (signal?.aborted) throw new AccessError(-32010, 'Cancelled before submission');
+      if (attachmentEntry) requireAttachmentCapability(this.attachmentCapability);
       this.db.prepare('INSERT INTO client_submissions VALUES(?,?,?)').run(localId, messageId, 'running');
       const requestId = createHash('sha256').update(`${this.serviceId}\0${this.account}\0${localId}\0${messageId}`).digest('hex');
       this.listeners.set(row.remote_id, notification => {
@@ -88,12 +103,14 @@ export class MemberClient {
       });
       const abort = () => { if (!peer.closed) peer.notify('session/cancel', { sessionId: row.remote_id }); };
       signal?.addEventListener('abort', abort, { once: true });
+      const release = attachmentEntry ? this.attachments.bind(row.remote_id, requestId, attachmentEntry, signal) : () => {};
       sent = true;
       try {
-        const result = await peer.request('session/prompt', { sessionId: row.remote_id, prompt: [{ type: 'text', text }], _meta: { requestId } }, { timeoutMs: 0 });
+        const meta = { requestId, ...(attachmentEntry ? { attachments: attachmentEntry.items.map(item => item.manifest) } : {}) };
+        const result = await peer.request('session/prompt', { sessionId: row.remote_id, prompt: [{ type: 'text', text }], _meta: meta }, { timeoutMs: 0 });
         this.db.prepare('UPDATE client_submissions SET state=? WHERE local_id=? AND message_id=?').run(result.stopReason, localId, messageId);
         return result;
-      } finally { signal?.removeEventListener('abort', abort); }
+      } finally { release(); signal?.removeEventListener('abort', abort); }
     } catch (error) {
       if (sent && !this.stopped) this.db.prepare("UPDATE client_submissions SET state='unknown' WHERE local_id=? AND message_id=?").run(localId, messageId);
       throw error;
@@ -119,5 +136,5 @@ export class MemberClient {
     this.reconnectTimer.unref?.();
   }
   disconnect() { this.peer?.close(); }
-  close() { this.stopped = true; clearTimeout(this.reconnectTimer); this.reconnectTimer = null; this.disconnect(); this.db.close(); }
+  close() { this.stopped = true; clearTimeout(this.reconnectTimer); this.reconnectTimer = null; this.disconnect(); this.attachments?.clear(); this.db.close(); }
 }

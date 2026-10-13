@@ -5,6 +5,7 @@ import { openSsh } from './ssh.mjs';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { resolveMemberConfiguration } from './configuration.mjs';
+import { AttachmentAuthorization, explicitPaths } from './attachments.mjs';
 
 export const name = 'collaboration-client';
 export const inject = ['llm'];
@@ -24,7 +25,7 @@ export class MemberAdapter extends LlmAdapter {
     super(); this.client = client; this.provider = provider; this.model = model;
   }
   providerRetryPolicy() { return { mode: 'normal', maxRetries: 0, retryableCodes: [], initialDelayMs: 0, maxDelayMs: 0, jitterRatio: 0 }; }
-  async listModels() { return [{ provider: this.provider, id: this.model, name: '协作服务', inputModalities: ['text'], outputModalities: ['text'] }]; }
+  async listModels() { return [{ provider: this.provider, id: this.model, name: '协作服务', description: '附件传输与受限归档；图片可上传不代表服务模型具备视觉能力', inputModalities: ['text', 'image'], outputModalities: ['text'] }]; }
   async *stream(options) {
     const finishError = error => ({ type: 'finish', reason: { kind: 'error', failure: { code: 'COLLABORATION_NO_REPLAY', message: error.message } } });
     if (options.purpose === 'session-title') {
@@ -34,13 +35,18 @@ export class MemberAdapter extends LlmAdapter {
     }
     if (options.purpose !== undefined) { yield finishError(new Error('Auxiliary model calls must not run the remote business Agent')); return; }
     const message = [...options.messages].reverse().find(m => m.role === 'user' && m.source?.kind === 'user');
-    if (!options.sessionId || !message?.id || message.content.some(b => b.type !== 'text')) {
-      yield finishError(new Error('Identified local conversation and text-only human message required')); return;
+    if (!options.sessionId || !message?.id || message.content.some(b => !['text','file','image'].includes(b.type))) {
+      yield finishError(new Error('Identified local conversation and supported human message required')); return;
+    }
+    const attachmentEntry = this.client.attachments?.take(String(options.sessionId), String(message.id));
+    const plainText = message.content.filter(b => b.type === 'text').map(b => b.text).join('\n');
+    if (!attachmentEntry && (message.content.some(b => b.type !== 'text') || explicitPaths(plainText).length)) {
+      yield finishError(new Error('Attachment authorization must be captured from the current human message by the installed plugin')); return;
     }
     const queue = []; let wake, ended = false, failure, result;
     const signal = () => { wake?.(); wake = null; };
     const task = this.client.prompt(String(options.sessionId), {
-      messageId: String(message.id), text: message.content.map(b => b.text).join('\n'), signal: options.signal,
+      messageId: String(message.id), text: attachmentEntry?.text || plainText, attachmentEntry, signal: options.signal,
       onUpdate: update => { queue.push(update); signal(); },
     }).then(value => { result = value; }, error => { failure = error; }).finally(() => { ended = true; signal(); });
     let index = 0, open = null;
@@ -73,7 +79,17 @@ export function apply(ctx, input) {
     return; // No database, adapter or SSH while deployment identity/connection is incomplete.
   }
   if (config.databasePath !== ':memory:') mkdirSync(dirname(config.databasePath), { recursive: true });
-  const client = new MemberClient({ connect: () => openSsh(config.ssh), databasePath: config.databasePath, serviceId: config.serviceId, account: config.ssh.account,
+  const attachments = new AttachmentAuthorization({ attachmentStore: ctx.get('attachments'), workspaceOf: localId => ctx.get('sessions')?.get(localId)?.header.cwd });
+  // Waterfall is before provider file-placeholder projection. Never infer native refs from text.
+  ctx.on('llm/stream', async function* (options, next) {
+    if (options.provider !== (config.provider ?? 'collaboration-remote') || options.model !== (config.model ?? 'server-agent') || options.purpose !== undefined || !options.sessionId) { yield* next(); return; }
+    const message = [...options.messages].reverse().find(m => m.role === 'user' && m.source?.kind === 'user');
+    try {
+      if (message && !client.wasSubmitted(String(options.sessionId), String(message.id))) await attachments.capture({ localId: String(options.sessionId), message, signal: options.signal });
+      yield* next();
+    } finally { if (message) attachments.take(String(options.sessionId), String(message.id)); }
+  });
+  const client = new MemberClient({ connect: () => openSsh(config.ssh), databasePath: config.databasePath, serviceId: config.serviceId, account: config.ssh.account, attachments,
     // Recovery snapshot is visible as a local plugin notice, never resubmitted as user input.
     onHistory: ({ localId, events, status }) => {
       const agent = ctx.get('agents')?.get(localId);

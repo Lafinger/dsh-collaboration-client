@@ -32,14 +32,14 @@ github:Lafinger/dsh-collaboration-client
 这会安装默认分支代码，不自动选择最新 Release。正式使用建议固定版本：
 
 ```text
-github:Lafinger/dsh-collaboration-client#v0.2.1
+github:Lafinger/dsh-collaboration-client#v0.3.0
 ```
 
 隔离 CLI 验证示意：
 
 ```sh
 dsh plugin --profile collaboration-compat-github add github:Lafinger/dsh-collaboration-client --ignore-scripts
-dsh plugin --profile collaboration-compat-github-tag add github:Lafinger/dsh-collaboration-client#v0.2.1 --ignore-scripts
+dsh plugin --profile collaboration-compat-github-tag add github:Lafinger/dsh-collaboration-client#v0.3.0 --ignore-scripts
 ```
 
 还可在[Releases](https://github.com/Lafinger/dsh-collaboration-client/releases)下载 `.tgz`，核对 SHA256SUMS 后安装。main移到新提交不改变已固定的tag；版本tag/附件不得移动或覆盖。
@@ -79,7 +79,7 @@ pnpm run check
 pnpm pack --out .dsh/dsh-collaboration-client.tgz
 node scripts/check-package.mjs .dsh/dsh-collaboration-client.tgz
 pnpm run install:check github:Lafinger/dsh-collaboration-client
-pnpm run install:check github:Lafinger/dsh-collaboration-client#v0.2.1
+pnpm run install:check github:Lafinger/dsh-collaboration-client#v0.3.0
 ```
 
 GitHub来源验证需要网络，单独运行，不让普通离线check依赖远端状态。真正DSH安装验证只用专用profile，不写desktop/acp。联合服务端验收仍独立，CI不依赖兄弟仓库。

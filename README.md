@@ -12,7 +12,7 @@
 - [配置与安装](docs/INSTALL.md)、[恢复行为](docs/RECOVERY.md)、[通信契约](docs/PROTOCOL-v2.json)、[验证记录](docs/VERIFY.md)。
 - [术语](GLOSSARY.md)、[来源](PROVENANCE.json)。
 
-客户端不含服务端签名密钥、账号认证权威、业务库或工作台工具。只有自身会话映射使用的 SQLite，不与服务器业务库混用。保留本地 DSH loop，但不调用本地业务模型；只转发最新有稳定 ID 的 user-source 文本。
+客户端不含服务端签名密钥、账号认证权威或业务库。只有自身会话映射使用的 SQLite，不与服务器业务库混用。保留本地 DSH loop，但不调用本地业务模型；转发最新有稳定 ID 的 user-source 指令。附件0.3.0新增当前消息明确授权文件的工具分块传输，不开放任意本地文件访问，见[附件用法与边界](<docs/ATTACHMENTS.md>)。
 
 ## 从 GitHub 安装
 
@@ -22,15 +22,15 @@ DSH 插件管理器安装来源填写：
 github:Lafinger/dsh-collaboration-client
 ```
 
-正式使用可固定发行版：`github:Lafinger/dsh-collaboration-client#v0.2.1`。无版本入口读取默认分支，不自动选择最新Release。仅GitHub构建/发布，不发布npm或插件市场；自动测试、标签发布和Release下载见[发布说明](docs/RELEASE.md)，当前证据见[新版线上验收](docs/RENAME-RELEASE-VERIFY.md)，旧首版证据在[历史记录](docs/GITHUB-RELEASE-VERIFY.md)。
+正式使用可固定发行版：`github:Lafinger/dsh-collaboration-client#v0.3.0`。无版本入口读取默认分支，不自动选择最新Release。仅GitHub构建/发布，不发布npm或插件市场；自动测试、标签发布和Release下载见[发布说明](docs/RELEASE.md)，当前证据见[新版线上验收](docs/RENAME-RELEASE-VERIFY.md)，旧首版证据在[历史记录](docs/GITHUB-RELEASE-VERIFY.md)。
 
 ## 首次配置
 
-安装后仅启用开关不代表业务连通。0.2.1 空配置进入安全的“待配置”状态；不会连接、不建库、不注册业务模型。将[空模板](examples/client-config.example.json)复制到用户 `.dsh/dsh-collaboration-client/collaboration-client.json`，填入真实服务Id、SSH主机、独立账号及本机密钥/known_hosts路径；检查后重新启用组件。没有 GUI 配置表单，详细步骤见[连接配置](docs/INSTALL.md)。
+安装后仅启用开关不代表业务连通。0.3.0 空配置进入安全的“待配置”状态；不会连接、不建库、不注册业务模型。将[空模板](examples/client-config.example.json)复制到用户 `.dsh/dsh-collaboration-client/collaboration-client.json`，填入真实服务Id、SSH主机、独立账号及本机密钥/known_hosts路径；检查后重新启用组件。没有 GUI 配置表单，详细步骤见[连接配置](docs/INSTALL.md)。
 
 ## 开发与检查
 
-客户端 **0.2.1** 对应宿主 **DSH 0.2.0-rc.2**，Cordis `4.0.4`、Schemastery `3.18.4`。要求 Node >=24、pnpm，使用本项目 lockfile 安装；旧客户端 0.1.0 的 0.1.5 peer 声明会被当前安装器正确拒绝，不应使用版本豁免绕过。对应服务端0.3.0，协作扩展协议v2（ACP-shaped基础版本1），严格协商，不兼容旧命名。
+客户端 **0.3.0** 对应宿主 **DSH 0.2.0-rc.2**，Cordis `4.0.4`、Schemastery `3.18.4`。要求 Node >=24、pnpm，使用本项目 lockfile 安装；旧客户端 0.1.0 的 0.1.5 peer 声明会被当前安装器正确拒绝，不应使用版本豁免绕过。对应服务端0.4.0，协作扩展协议v2（ACP-shaped基础版本1），附件扩展1双方严格协商，不兼容旧命名。图片支持传输归档不等于模型支持视觉分析。
 
 ```sh
 pnpm install --frozen-lockfile --ignore-scripts
