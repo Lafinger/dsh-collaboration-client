@@ -6,7 +6,7 @@
 - 新默认配置home/.dsh/dsh-collaboration-client/collaboration-client.json；子进程隔离home回归证明旧根目录文件不回退，新目录带BOM JSON正常加载，不写真实用户配置。
 - 基础ACP-shaped版本1与协作扩展v2独立；缺失/旧/未来/字符串协作版本和错误基础版本在identity/session/business前拒绝，无downgrade或retry，失败不生成mapping/submission。
 - 本地Node24.21.0/pnpm11.7.0：25单元、6官方接口集成、1显式联合契约PASS。新版tarball20文件，抽取包安全待配置挂载PASS，冻结依赖与命名/链接审计PASS。
-- 新版GitHub CI/Release/固定来源安装及Docker部署另行记录，不能用以下0.1.x历史证据冒充当前版本完成。现用两台GUI由用户卸载重装，本轮不代替其GUI验收或调用真实模型。
+- 新版GitHub CI/Release/固定来源安装已完成，见[新版验收](RENAME-RELEASE-VERIFY.md)；不能用以下0.1.x历史证据冒充当前版本完成。现用两台GUI由用户卸载重装，本轮不代替其GUI验收或调用真实模型。
 
 ## 检查方式
 
