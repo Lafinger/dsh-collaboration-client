@@ -10,7 +10,7 @@ import { join } from 'node:path';
 test('JSON configuration activates actual plugin lazily and creates only its own client state', async () => {
   const root = mkdtempSync(join(tmpdir(), 'collab-mounted-config-'));
   const file = join(root, 'client.json'), databasePath = join(root, 'state/client.sqlite');
-  writeFileSync(file, JSON.stringify({ serviceId: 'fixture', databasePath, ssh: { host: 'example.test', account: 'alice', identityFile: join(root, 'key'), knownHostsFile: join(root, 'known_hosts') } }));
+  writeFileSync(file, JSON.stringify({ loginOrigin:'https://login.example.test',serviceId: 'fixture', databasePath, ssh: { host: 'example.test', account: 'alice', identityFile: join(root, 'key'), knownHostsFile: join(root, 'known_hosts') } }));
   const ctx = new Context(), llm = ctx.plugin(LlmRuntime); await llm.await();
   try {
     const entry = ctx.plugin(plugin, { configFile: file }); await entry.await();

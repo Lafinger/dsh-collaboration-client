@@ -1,0 +1,56 @@
+{
+  "selected": {
+    "trigger": "P · 项目甲",
+    "groups": [
+      {
+        "label": "Collaboration",
+        "rows": [
+          { "caption": "P · 项目甲", "checked": true, "disabled": false },
+          { "caption": "Q · 项目乙", "checked": false, "disabled": false }
+        ],
+        "status": []
+      },
+      {
+        "label": "Ordinary",
+        "rows": [{ "caption": "普通模型", "checked": false, "disabled": false }],
+        "status": []
+      }
+    ],
+    "independentProjectPanel": false
+  },
+  "mapped": {
+    "trigger": "P · 项目甲",
+    "groups": [
+      {
+        "label": "Collaboration",
+        "rows": [
+          { "caption": "P · 项目甲", "checked": true, "disabled": false },
+          { "caption": "Q · 项目乙", "checked": false, "disabled": true }
+        ],
+        "status": ["此会话已绑定项目，切换项目请新建会话。"]
+      },
+      {
+        "label": "Ordinary",
+        "rows": [{ "caption": "普通模型", "checked": false, "disabled": false }],
+        "status": []
+      }
+    ],
+    "independentProjectPanel": false
+  },
+  "unknown": {
+    "trigger": "项目选择未确认",
+    "groups": [
+      {
+        "label": "Collaboration",
+        "rows": [],
+        "status": ["项目选择结果未确认；重新展开菜单核对前不要发送消息。"]
+      },
+      {
+        "label": "Ordinary",
+        "rows": [{ "caption": "普通模型", "checked": false, "disabled": true }],
+        "status": []
+      }
+    ],
+    "independentProjectPanel": false
+  }
+}

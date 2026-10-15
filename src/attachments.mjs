@@ -4,6 +4,10 @@ import { resolve, relative, isAbsolute, basename, dirname } from 'node:path';
 import { AccessError } from './protocol.mjs';
 import { MAX_ATTACHMENT_BYTES, MAX_MESSAGE_ATTACHMENTS, ATTACHMENT_CHUNK_BYTES, safeAttachmentName, validateAttachmentManifest } from './attachment-protocol.mjs';
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
+export function rejectGifUpload({name,mediaType,data}={}) {
+  const signature=data?.subarray(0,6).toString('ascii');
+  if (/\.gif$/i.test(name??'') || mediaType==='image/gif' || signature==='GIF87a' || signature==='GIF89a') throw new AccessError(-32602, 'GIF uploads are not allowed; select a PNG, JPEG or WebP original instead');
+}
 export function explicitPaths(text) {
   if (typeof text !== 'string') return [];
   return [...text.matchAll(/(?:^|[\s（(])@(?:"([^"\r\n]+)"|'([^'\r\n]+)'|([^\s\r\n]+))/gu)].map(match => match[1] ?? match[2] ?? match[3]);
@@ -58,6 +62,7 @@ export class AttachmentAuthorization {
     for (const block of native) {
       if (signal?.aborted) throw signal.reason;
       const ref=block.attachment; if (!ref || !this.attachmentStore) throw new AccessError(-32602, 'Official host attachment storage unavailable');
+      rejectGifUpload(ref);
       if (!Number.isSafeInteger(ref.bytes) || ref.bytes < 1 || ref.bytes > MAX_ATTACHMENT_BYTES) throw new AccessError(-32602, 'Native attachment exceeds selection size limit');
       const name=safeAttachmentName(ref.name ?? ({'image/png':'image.png','image/jpeg':'image.jpg','image/webp':'image.webp','image/gif':'image.gif'}[ref.mediaType] ?? 'attachment.bin'));
       const path=block.type==='file' ? this.attachmentStore.fileHostPath(ref) : this.attachmentStore.imageHostPath(ref);
@@ -72,7 +77,7 @@ export class AttachmentAuthorization {
     validateAttachmentManifest(items.map(item=>item.manifest));
     const entry={localId,messageId:String(message.id),items,text};this.pending.set(`${localId}\0${message.id}`,entry);return entry;
   }
-  item(name,data,sourceKind,permitted){return {manifest:{handle:randomBytes(32).toString('hex'),name,bytes:data.length,sha256:digest(data),sourceKind,...permitted},data};}
+  item(name,data,sourceKind,permitted){rejectGifUpload({name,data});return {manifest:{handle:randomBytes(32).toString('hex'),name,bytes:data.length,sha256:digest(data),sourceKind,...permitted},data};}
   take(localId,messageId){const key=`${localId}\0${messageId}`,entry=this.pending.get(key);this.pending.delete(key);return entry;}
   bind(sessionId,requestId,entry,signal){const key=`${sessionId}\0${requestId}`;this.active.set(key,{...entry,signal});return()=>this.active.delete(key);}
   read({sessionId,requestId,handle,offset,maxBytes}){

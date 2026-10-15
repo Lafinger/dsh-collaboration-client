@@ -5,8 +5,9 @@ test('official LLM waterfall captures real native file before placeholder projec
  const ctx=new Context();const llm=ctx.plugin(LlmRuntime),sessions=ctx.plugin(SessionStore);await llm.await();await sessions.await();
  const bytes=Buffer.from('non-sensitive sample'),ref={attachmentId:'sha256:'+createHash('sha256').update(bytes).digest('hex'),name:'requirements.md',bytes:bytes.length};
  ctx.provide('attachments',{fileHostPath:()=>undefined,async*readFileStream(){yield bytes;}});
- const fiber=ctx.plugin(plugin,{databasePath:':memory:',serviceId:'fixture-service',ssh:{account:'alice',host:'example.test',identityFile:resolve('fixture-key'),knownHostsFile:resolve('fixture-known-hosts')}});await fiber.await();
+ const fiber=ctx.plugin(plugin,{loginOrigin:'https://login.example.test',databasePath:':memory:',serviceId:'fixture-service',ssh:{account:'alice',host:'example.test',identityFile:resolve('fixture-key'),knownHostsFile:resolve('fixture-known-hosts')}});await fiber.await();
  const client=fiber.ctx.get('collaborationMemberClient'),service=new FakeService();
+ client.requireLogin=false; // Legacy attachment fixture; secure login has independent tests.
  client.connect=async()=>{const peer=service.connect(),request=peer.request.bind(peer);peer.request=async(method,params)=>method==='initialize'?{...(await request(method,params)),agentCapabilities:{attachmentTransfer:{version:1}}}:request(method,params);return peer;};
  try{
   const message=createUserMessage({content:[{type:'text',text:'附件操作: 上传并归档\nproject_id: '+'a'.repeat(32)},{type:'file',attachment:ref}],source:{kind:'user'}});

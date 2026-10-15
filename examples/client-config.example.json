@@ -1,6 +1,7 @@
 {
   "serviceId": "",
   "databasePath": "",
+  "loginOrigin": "",
   "ssh": {
     "host": "",
     "account": "",

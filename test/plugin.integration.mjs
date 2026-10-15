@@ -13,7 +13,7 @@ test('plugin mounts actual adapter and recovery snapshot is non-user local conte
   const session = ctx.sessions.create('local-recovery');
   ctx.provide('agents', { get: id => id === session.id ? { session } : undefined });
   const fiber = ctx.plugin(plugin, {
-    databasePath: ':memory:', serviceId: 'test', provider: 'collaboration-remote', ssh: { account: 'alice', host: 'example.test', identityFile: resolve('fixture-key'), knownHostsFile: resolve('fixture-known-hosts') },
+    loginOrigin:'https://login.example.test',databasePath: ':memory:', serviceId: 'test', provider: 'collaboration-remote', ssh: { account: 'alice', host: 'example.test', identityFile: resolve('fixture-key'), knownHostsFile: resolve('fixture-known-hosts') },
   });
   try {
     await fiber.await();

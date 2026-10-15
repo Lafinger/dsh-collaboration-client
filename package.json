@@ -1,6 +1,6 @@
 {
   "name": "dsh-collaboration-client",
-  "version": "0.3.0",
+  "version": "0.5.3",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -12,10 +12,11 @@
   "description": "DSH member entry plugin: SSH transport, durable remote-session mapping and no-replay recovery.",
   "engines": { "node": ">=24.0.0", "dsh": "0.2.0-rc.2" },
   "main": "src/member-plugin.mjs",
-  "exports": { ".": "./src/member-plugin.mjs", "./client": "./src/member-client.mjs", "./protocol": "./src/protocol.mjs", "./package.json": "./package.json" },
-  "files": ["src", "cordis.patch.yml", "scripts/check-install.ps1", "scripts/check-config.mjs", "examples", "docs", "GLOSSARY.md", "README.md", "LICENSE", "PROVENANCE.json"],
-  "dsh": { "bundle": { "patch": "cordis.patch.yml" } },
+  "exports": { ".": "./src/member-plugin.mjs", "./client": "./lib/client.js", "./member-client": "./src/member-client.mjs", "./protocol": "./src/protocol.mjs", "./client-ui": "./lib/client.js", "./package.json": "./package.json" },
+  "files": ["src", "client", "lib/client.js", "test", "scripts", ".github/workflows/release.yml", "cordis.patch.yml", "examples", "docs", "GLOSSARY.md", "README.md", "LICENSE", "PROVENANCE.json"],
+  "dsh": { "bundle": { "patch": "cordis.patch.yml" }, "client": { "platform": "web", "inject": ["@deepseek-ai/dsh-client-connection", "@deepseek-ai/dsh-client-ui-slots", "@deepseek-ai/dsh-client-ui-model-selection", "@deepseek-ai/dsh-client-locale"], "external": [] } },
   "scripts": {
+    "build": "node scripts/build-client.mjs",
     "test": "node --test test/*.test.mjs",
     "integration": "node --import ./scripts/official-loader.mjs --test test/*.integration.mjs",
     "check": "node scripts/check.mjs",
@@ -24,6 +25,6 @@
     "config:check": "node scripts/check-config.mjs",
     "install:check": "node scripts/check-github-install.mjs"
   },
-  "peerDependencies": { "@deepseek-ai/cordis": "4.0.4", "@deepseek-ai/dsh-llm": "0.2.0-rc.2", "@deepseek-ai/dsh-session": "0.2.0-rc.2", "@deepseek-ai/schemastery": "3.18.4" },
-  "devDependencies": { "@deepseek-ai/cordis": "4.0.4", "@deepseek-ai/schemastery": "3.18.4" }
+  "peerDependencies": { "@deepseek-ai/dsh-scope": "0.2.0-rc.2", "@deepseek-ai/cordis": "4.0.4", "@deepseek-ai/dsh-llm": "0.2.0-rc.2", "@deepseek-ai/dsh-session": "0.2.0-rc.2", "@deepseek-ai/schemastery": "3.18.4" },
+  "devDependencies": { "@deepseek-ai/cordis": "4.0.4", "@deepseek-ai/schemastery": "3.18.4", "@deepseek-ai/dsh-client-modules": "0.2.0-rc.2", "@deepseek-ai/dsh-client-connection": "0.2.0-rc.2", "@deepseek-ai/dsh-scope": "0.2.0-rc.2", "@deepseek-ai/cordis-plugin-loader": "1.0.5", "@deepseek-ai/cordis-plugin-include": "1.0.9", "@deepseek-ai/dsh-client-ui-renderer": "0.2.0-rc.2", "@deepseek-ai/dsh-client-ui-settings-general": "0.2.0-rc.2", "@deepseek-ai/dsh-client-ui-slots": "0.2.0-rc.2", "@deepseek-ai/dsh-client-store": "0.2.0-rc.2", "@deepseek-ai/dsh-client-ui-model-selection": "0.2.0-rc.2", "@deepseek-ai/dsh-api-session-controller": "0.2.0-rc.2", "react": "18.3.1", "react-dom": "18.3.1", "react-test-renderer": "18.3.1", "jsdom": "26.1.0", "js-yaml": "4.3.2", "zustand": "4.4.7", "immer": "10.1.1" }
 }

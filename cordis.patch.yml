@@ -1,8 +1,7 @@
-# Opt-in entry: installation must not connect until deployment config is supplied.
+# Start the local entry on fresh install; discovery never connects or authenticates automatically.
+# A later user profile patch still owns explicit disable/config choices.
 - insert:
     - id: collaboration-client
       name: dsh-collaboration-client
-      disabled: true
-      config:
-        # Empty enable is safe and reads the member-owned default JSON configuration.
-        configFile: !!js process.env.DSH_COLLABORATION_CLIENT_CONFIG
+      disabled: false
+      config: {}

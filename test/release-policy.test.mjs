@@ -26,6 +26,7 @@ test('GitHub workflow separates unprivileged build from tag-only contents-write 
   const source = readFileSync(new URL('../.github/workflows/release.yml', import.meta.url), 'utf8');
   assert.match(source, /ubuntu-latest, windows-latest/);
   assert.match(source, /--frozen-lockfile --ignore-scripts/);
+  assert.match(source,/pnpm run build[\s\S]*pnpm pack --out/,'Package job must build its own checkout before packing');
   assert.match(source, /needs: package/);
   assert.match(source, /startsWith\(github.ref, 'refs\/tags\/v'\)/);
   assert.match(source, /contents: read/); assert.match(source, /contents: write/);

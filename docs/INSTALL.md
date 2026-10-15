@@ -1,89 +1,95 @@
-# 客户端安装与连接配置
+# 客户端安装与连接配置（0.5.3）
 
-## 安装、配置、连通是三件事
+## 安装、组件启用、身份登录是三件事
 
-客户端 **0.3.0** 对应服务端 **0.4.1**，宿主精确 **DSH0.2.0-rc.2 / Cordis4.0.4 / Schemastery3.18.4**。通信使用[协作扩展协议v2](PROTOCOL-v2.json)，基础ACP-shaped版本仍1；客户端、connector、服务器均拒绝缺失/旧/错误协作版本，不自动降级或业务重放。
+客户端 **0.5.3** 面向 **DSH 0.2.0-rc.2 / Cordis 4.0.4 / Schemastery 3.18.4**，保留0.3.1的浏览器启动修复。使用[协作协议v3](<PROTOCOL-v3.json>)，需要配套支持钉钉设备登录的服务端（本轮服务端0.5.0按固定成功提交部署）；不允许旧v2或SSH-only业务回退。旧0.3.0标签不包含这些功能，正式使用0.5.3发行包；不把待发布目标当已成功发布证据。
 
-插件默认禁用；空配置启用安全进入待配置，不建库、不注册远端模型、不发SSH。没有浏览器配置表单；只配置成员自己的JSON，不能加入服务端签名秘密或模型API Key。
+- **新安装默认启用本机组件**。用户已有明确禁用仍有效，升级不强制打开用户关掉的组件。
+- 启动只读取本机配置；缺配置安全进入待配置，有完整配置才创建指定的本机状态库、注册本地模型目录元数据。
+- **不自动SSH、扫码、调用模型、发送消息或替换默认模型**。业务前需成员明确登录和为当前会话选择项目。
 
 ## Windows最短步骤
 
-1. 在DSH插件管理器安装：
+1. 在DSH插件管理器安装成功发行后的`github:Lafinger/dsh-collaboration-client#v0.5.3`，或使用对应已核验 **0.5.3 tgz**，替换旧客户端包。安装完成后完全重启DSH并刷新当前Web页面，使Host和浏览器代码一致；0.4.0有本机状态响应格式错误，不能仅刷新旧Host。本轮不代为安装或刷新现用profile。
+2. 不需要手改profile补丁或成员JSON。插件按当前用户主目录读取 `.dsh/dsh-collaboration-client/`；本用户即 `C:\Users\cjh13\.dsh\dsh-collaboration-client\`，其他用户不会套用这个用户名。
+3. 打开 **设置 → 协作服务** 查看连接来源、SSH入口、服务和成员账号。自动发现无歧义时直接采用；有多份候选则在下拉框选择并点“使用所选配置”。
+4. 若管理员另行提供有效成员配置JSON，可点“导入管理员提供的成员配置JSON”。导入副本存入插件目录的独立子目录，不覆盖原JSON或profile。只接受64KiB以内连接配置，引用的本机密钥和known_hosts文件须存在；**不接受私钥正文、模型Key或服务端签名密钥**。
+5. 点“发起钉钉扫码登录”，打开可信登录页确认，再点“我已扫码，完成登录”。详见[扫码指南](<DINGTALK-LOGIN.md>)。
+6. 新建本地会话，展开模型服务商／模型列表，在 **Collaboration** 分组直接点选授权项目。每次展开读取服务器项目，没有独立项目区、确认或刷新按钮；成功后模型位置显示具体项目，之后才由成员自己主动发送新消息。已有远端会话不能换项目。普通模型仍可选择，新会话不自动继承项目。详见[项目菜单](<PROJECT-MENU.md>)。
 
-   ```text
-   github:Lafinger/dsh-collaboration-client#v0.3.0
-   ```
+Host与浏览器须同时升级，旧页面不能用于新菜单验收。不覆盖原连接配置、不清空或迁移已有远端映射；新版启动增量创建成员库提交日志表，明确选择时使用该表，不改变DSH已发布会话事件格式。结果未确认时不要发送消息，重开菜单核对，不删库或重发旧消息。
 
-   默认分支来源也支持，但不会自动选择最新Release；详见[发布说明](RELEASE.md)。
+没有有效配置时，不猜服务器／账号，不自动生成真实部署参数；应由管理员提供正确成员资料。结构正确不证明SSH、登录服务或权限可用。
 
-2. 创建当前用户目录 `.dsh/dsh-collaboration-client/`，将[空模板](../examples/client-config.example.json)复制为其中的 `collaboration-client.json`。
+## 模型按钮原生样式
 
-   ```powershell
-   $directory = Join-Path $env:USERPROFILE '.dsh\dsh-collaboration-client'
-   $configPath = Join-Path $directory 'collaboration-client.json'
-   New-Item -ItemType Directory -Path $directory -Force | Out-Null
-   # 编辑前检查已有文件；不要自动覆盖。
-   Test-Path -LiteralPath $configPath
-   ```
+0.5.2会话右下角按钮恢复原生字体／间距、推理等级次级色及SVG箭头，保留Collaboration项目列表和依赖修复。只验证外观不需要发送消息；[调整范围与复测](<MODEL-TRIGGER-STYLE.md>)。
 
-   **默认只读这个新路径**，不自动读取旧的用户 `.dsh/collaboration-client.json`；没有自动迁移/猜账号/建真实配置。
+## 已登录但只能看到“项目选择”
 
-3. 填写部署提供的真实参数：
+0.5.0的模型菜单缺少remote.session注入声明，会被宿主在渲染崩溃后撤下；这与钉钉登录状态无关。应升级0.5.3再重启加载，不需改成员配置或清库。打开后应看到“搜索模型或项目…”和具体项目行，登录／权限失败则明确提示。[原因与不调用模型的复测步骤](<MENU-INJECT-FIX.md>)。
 
-| 字段 | 内容 |
+## 本机状态读取故障与复测
+
+保留0.4.1对0.4.0成功响应格式不匹配的修复。升级后先打开设置 → 协作服务，检查连接来源、服务／账号和候选配置是否显示；**不应停在“正在读取本机配置”并报“无法读取本机协作状态”**。本地状态显示前不要扫码、导入配置或测试业务，也不需要删库或改原JSON。
+
+- HTTP404：Host组件未注册此路由，检查组件启用及重启。
+- HTTP401／403：本机Host认证／来源校验不通过，不应通过关闭安全检查解决。
+- 格式不兼容：Host和页面可能不是同一新版，完全重启DSH后刷新。
+- 明确“待配置”及具体配置原因：接口已正常返回，按原因核对成员配置；不是网络读取故障。
+
+请提供错误文本、组件版本和截图，勿提供私钥／token。详见[RPC修复记录](<LOCAL-STATUS-RPC-FIX.md>)。
+
+## 扫码按钮的连接提前结束
+
+配置可读但点击扫码报Connection ended不是本机状态RPC故障。0.4.2提供安全的SSH失败分类、阶段和退出码；仍需现场证据确定实际认证／远端启动／协议原因。请升级重启后只点击一次，提供新的错误文本；不改配置、不删库、不关闭指纹检查。下拉框仍为“请选择”不代表当前保存选择未生效。[完整诊断表及边界](<LOGIN-CONNECTION-DIAGNOSTICS.md>)。
+
+## 自动发现规则与优先级
+
+只发现标准文件 `collaboration-client.json`，不递归扫描任意JSON或私钥：
+
+1. 设置页已保存的选择优先；所选文件丢失、损坏或连接身份参数改变时要求重新选择，**不偷偷采用另一份配置**。
+2. 未保存选择时，保留旧显式配置：完整内联资料独立使用；否则 `configFile` > `DSH_COLLABORATION_CLIENT_CONFIG` > 目录发现。不合并身份字段，不同时用内联连接和configFile。
+3. 自动发现优先有效顶层标准配置；无有效顶层时检查一级子目录同名文件。唯一可用候选自动采用，多份可用候选需在设置中确认。深层文件、其他文件名、逃出目录的链接不自动采用。
+4. “恢复自动选择”只写插件自己的选择状态，明确恢复目录发现，覆盖旧显式配置优先级；不修改旧profile文本。
+
+选择状态保存在插件自己的 `.member-selection.json`，只包含候选路径和配置指纹，无登录token。来源文件保持原样。
+
+**切换规则**：正在查询、连接或执行业务时禁止切换；已登录／待扫码确认时需先点“退出当前设备”。切换后重新扫码，不迁移、清空或重放旧会话。若活动配置在磁盘上改变，新的业务／恢复请求失败关闭；退出原设备仍可执行。不同成员／服务建议使用不同本机状态库。
+
+## 成员配置的内容
+
+管理员提供的配置可参照[空模板](<../examples/client-config.example.json>)，但空模板不是可用部署参数：
+
+| 字段 | 含义 |
 |---|---|
-| serviceId | 与服务端相同的服务标识 |
-| databasePath | 此成员私有映射SQLite绝对路径，不是服务器业务库；不同成员/服务不共用 |
-| ssh.host | 服务器实际IP/域名，不能把另一机器的127.0.0.1当服务器 |
-| ssh.account | 服务器已创建的SSH成员账号，与密钥匹配，不是GUI昵称或项目角色 |
-| ssh.port | 实际发布端口 |
-| ssh.identityFile | 本机成员私钥绝对路径，仅路径，不是密钥正文 |
-| ssh.knownHostsFile | 经可信渠道核验的服务器主机公钥记录绝对路径 |
-| ssh.sshExecutable | 可选，本机OpenSSH程序路径 |
+| serviceId | 预期服务标识，须与服务器一致 |
+| databasePath | 本插件成员私有映射SQLite绝对路径，不是DSH通用库或服务器业务库 |
+| loginOrigin | 经管理员核验的HTTPS origin，无路径、查询或用户密码 |
+| ssh.host / ssh.port | 实际服务器IP／域名及发布端口 |
+| ssh.account | 服务器SSH成员账号，与密钥和扫码成员相匹配 |
+| ssh.identityFile | 本机成员私钥绝对路径，只是路径 |
+| ssh.knownHostsFile | 可信渠道核验后的主机公钥记录绝对路径 |
+| ssh.sshExecutable | 可选，本机OpenSSH程序的绝对路径；省略使用系统ssh |
+| provider / model | 可选本地路由标识，默认 collaboration-remote / server-agent |
 
-Windows路径可用正斜杠或JSON双反斜杠。密钥可保留原安全位置，无须与配置同目录，跨机器须改成本机实际路径。不要把模型API Key、另一个成员的私钥或服务端认证凭据复制进客户端。
+密钥可留在原安全位置，不必搬入配置目录。严格host key、publickey-only、无转发和固定远端 `collaboration-connect` 命令保留；不开放远端shell/SFTP。客户端不需要模型凭据。
 
-4. Node24只读配置检查（不会建库或连接）：
+可选只读诊断（Node24，不建库或连接）：
 
-   ```powershell
-   node scripts/check-config.mjs "$env:USERPROFILE\.dsh\dsh-collaboration-client\collaboration-client.json"
-   ```
-
-   退出0/configured只证明结构完整，不证明SSH/密钥/服务器可用。
-
-5. 关闭再打开collaboration-client组件；配置成功注册provider/model **collaboration-remote/server-agent**，显示名称**协作服务**。新会话选择此模型后，首次纯文本业务消息才连接。实际模型在服务器，客户端不需模型凭据。
-
-## 显式配置
-
-默认路径之外仍支持启动环境 `DSH_COLLABORATION_CLIENT_CONFIG`、组件 `configFile`，以及完整内联连接参数。不要同时用configFile与内联连接字段，不把部分字段与默认文件拼成身份：
-
-```yaml
-- id: collaboration-client
-  disabled: false
-  config:
-    configFile: /absolute/member-client.json
+```powershell
+node scripts/check-config.mjs
 ```
 
-显式旧位置只在用户主动指定时读取，不是自动回退。环境变量会覆盖默认路径，重装后应检查是否有旧的显式设置。
-
-provider/model可自定义，默认collaboration-remote/server-agent；严格host key、publickey-only、无转发、固定远端collaboration-connect不可更改。服务端使用forced connector，不开放shell/SFTP。
-
-## 清空服务器后的重新测试
-
-插件卸载不保证删除databasePath指向的外置映射库。服务器清空后旧本地对话不能恢复，不静默替换为新会话，不重发旧指令。
-
-1. 停止组件/退出DSH，先核对旧配置databasePath属于本插件成员状态，而不是普通DSH数据库/服务器业务库。
-2. 删除仅该插件专用SQLite及对应-wal/-shm边车；不删除整个.dsh，不删除普通聊天历史/密钥/known_hosts。
-3. 在新目录建立配置，使用新的独立数据库路径，卸载重装固定新版并启用。
-4. 必须新建测试会话并选择协作服务，不继续旧会话或点旧消息重试。
+不需要运行这个命令才能使用设置页。服务器清库或权限变化后旧映射恢复失败属于安全边界，不允许用自动清库、换映射或重发旧消息绕过；请新建会话并由管理员核对，**本轮没有删除任何用户库的授权**。
 
 ## 开发与隔离验证
 
 ```sh
 pnpm install --frozen-lockfile --ignore-scripts
 pnpm run check
-pnpm pack --out .dsh/dsh-collaboration-client-0.3.0.tgz
-node scripts/check-package.mjs .dsh/dsh-collaboration-client-0.3.0.tgz
+pnpm pack --out .dsh/dsh-collaboration-client-0.5.2-project-menu.tgz
+node scripts/check-package.mjs .dsh/dsh-collaboration-client-0.5.2-project-menu.tgz
 ```
 
-[包配置](../package.json)、[bundle patch](../cordis.patch.yml)默认disabled；[隔离安装检查](../scripts/check-install.ps1)只允许专用profile，不修改现用desktop/acp或启动替代Web服务。恢复语义见[恢复规则](RECOVERY.md)。历史0.1.x安装证据见[旧版验收](GITHUB-RELEASE-VERIFY.md)，不是新版通过的证明。
+[包配置](<../package.json>)保留正确浏览器出口，[bundle补丁](<../cordis.patch.yml>)只改变默认本机组件启用。测试使用官方Host／Loader、设置壳和模型目录／选择器；协作插件通过公开single槽接替菜单，在隔离JSDOM中断言项目行、每次展开刷新和卸载回退；不是现用GUI截图或真实钉钉／SSH验收。安装器辅助[检查脚本](<../scripts/check-install.ps1>)只允许专用profile。详细边界见[验证记录](<VERIFY.md>)与[恢复规则](<RECOVERY.md>)。

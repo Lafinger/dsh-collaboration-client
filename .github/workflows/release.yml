@@ -62,6 +62,7 @@ jobs:
         run: node scripts/check-release-tag.mjs
       - name: Pack source-ready GitHub plugin
         run: |
+          pnpm run build
           mkdir -p .dsh/release
           pnpm pack --out .dsh/release/dsh-collaboration-client.tgz
           node scripts/check-package.mjs .dsh/release/dsh-collaboration-client.tgz

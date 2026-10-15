@@ -8,7 +8,7 @@ import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import { join } from 'node:path';
 import { resolveMemberConfiguration, defaultConfigPath } from '../src/configuration.mjs';
-const fixture = root => ({ serviceId: 'fixture', databasePath: join(root, 'state/client.sqlite'), ssh: { host: 'example.test', account: 'alice', identityFile: join(root, 'key'), knownHostsFile: join(root, 'known_hosts') } });
+const fixture = root => { writeFileSync(join(root,'key'),'fixture key placeholder');writeFileSync(join(root,'known_hosts'),'fixture host placeholder');return { loginOrigin:'https://login.example.test',serviceId: 'fixture', databasePath: join(root, 'state/client.sqlite'), ssh: { host: 'example.test', account: 'alice', identityFile: join(root, 'key'), knownHostsFile: join(root, 'known_hosts') } }; };
 test('default config is user-owned plugin directory and never falls back to legacy root file', () => {
   assert.equal(defaultConfigPath(), join(homedir(), '.dsh', 'dsh-collaboration-client', 'collaboration-client.json'));
   const root = mkdtempSync(join(tmpdir(), 'collab-home-'));
