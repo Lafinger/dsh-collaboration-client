@@ -4,21 +4,19 @@ import { MemberClient } from './member-client.mjs';
 import { openSsh } from './ssh.mjs';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { MemberConnection } from './member-connection.mjs';
 import { AttachmentAuthorization, explicitPaths } from './attachments.mjs';
 import { installMemberRpc } from './member-rpc.mjs';
 import { installProjectRouting } from './project-selection.mjs';
+import {HttpsConnection} from './https-connection.mjs';
+import {HttpsMemberClient} from './https-client.mjs';
+import {openHttps} from './https-peer.mjs';
+import {LoginVault} from './login-vault.mjs';
 
 export const name = 'collaboration-client';
 export const inject = ['llm'];
 export const Config = z.object({
-  configFile: z.string().description('兼容旧显式配置；默认自动发现当前用户 .dsh/dsh-collaboration-client 内标准配置，设置页保存的选择优先。'),
-  provider: z.string(), model: z.string(),
-  serviceId: z.string(), databasePath: z.string(),loginOrigin:z.string(),
-  ssh: z.object({
-    host: z.string(), account: z.string(), identityFile: z.string(), knownHostsFile: z.string(),
-    port: z.number().min(1).max(65535).step(1), sshExecutable: z.string(),
-  }),
+  serviceUrl:z.string().description('MVP只需可信HTTPS服务地址；身份由电脑钉钉确定。'),
+
 });
 
 /** Independent adapter: no history-length heuristics, fresh-session fallback, or remote auxiliary prompts. */
@@ -84,7 +82,8 @@ export function apply(ctx, input = {}) {
     if ((!registration || config.provider !== adapter.provider) && ctx.llm.listProviders().some(row => row.id === config.provider)) throw new Error('所选配置provider已被其他组件使用');
     if (config.databasePath !== ':memory:') mkdirSync(dirname(config.databasePath), { recursive: true, mode: 0o700 });
     const attachments = new AttachmentAuthorization({ attachmentStore: ctx.get('attachments'), workspaceOf: localId => ctx.get('sessions')?.get(localId)?.header.cwd });
-    return new MemberClient({ connect: () => openSsh(config.ssh), databasePath: config.databasePath, serviceId: config.serviceId, account: config.ssh.account, attachments, requireLogin: true, loginOrigin: config.loginOrigin,
+    const mvp=config.mode==='mvp-https',Client=mvp?HttpsMemberClient:MemberClient;
+    return new Client({ connect: () => mvp?openHttps(config.origin):openSsh(config.ssh), databasePath: config.databasePath, serviceId: config.serviceId, account: config.ssh?.account, attachments, requireLogin: true, loginOrigin: config.loginOrigin,...mvp?{origin:config.origin,vault:new LoginVault(config.vaultPath)}:{},
       onHistory: ({ localId, events, status }) => {
         const agent = ctx.get('agents')?.get(localId);
         if (agent && events.length) {
@@ -103,7 +102,8 @@ export function apply(ctx, input = {}) {
     if (current.resolved.config) { adapter.provider = current.resolved.config.provider; adapter.model = current.resolved.config.model; }
     if (registration) { if(current.client) registration.replace([adapter.provider]);else{registration();registration=null;} }
   };
-  entry = new MemberConnection({ input, createClient, onChange: changed });
+  const Connection=ctx.get('collaborationLegacyTestConnection')??HttpsConnection;
+  entry = new Connection({ input, createClient, onChange: changed });
   if (entry.client) registration = ctx.llm.registerAdapter([adapter.provider], adapter);
   // No-config install keeps the settings UI alive. A later explicit UI choice can register the route lazily.
   entry.onChange = current => { changed(current); if (!registration && current.client) registration = ctx.llm.registerAdapter([adapter.provider], adapter); };

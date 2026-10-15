@@ -1,11 +1,12 @@
 import test from 'node:test';import assert from'node:assert/strict';import{Context}from'@deepseek-ai/cordis';
 import{LlmRuntime,createUserMessage,BlockAssembler}from'@deepseek-ai/dsh-llm';import{SessionStore}from'@deepseek-ai/dsh-session';import{createHash}from'node:crypto';import{resolve}from'node:path';
+import{installLegacyConnection}from'./helpers/legacy-connection.mjs';
 import*as plugin from'../src/member-plugin.mjs';import{FakeService}from'./helpers/fake-service.mjs';
 test('official LLM waterfall captures real native file before placeholder projection and never forwards host path',async()=>{
  const ctx=new Context();const llm=ctx.plugin(LlmRuntime),sessions=ctx.plugin(SessionStore);await llm.await();await sessions.await();
  const bytes=Buffer.from('non-sensitive sample'),ref={attachmentId:'sha256:'+createHash('sha256').update(bytes).digest('hex'),name:'requirements.md',bytes:bytes.length};
  ctx.provide('attachments',{fileHostPath:()=>undefined,async*readFileStream(){yield bytes;}});
- const fiber=ctx.plugin(plugin,{loginOrigin:'https://login.example.test',databasePath:':memory:',serviceId:'fixture-service',ssh:{account:'alice',host:'example.test',identityFile:resolve('fixture-key'),knownHostsFile:resolve('fixture-known-hosts')}});await fiber.await();
+ installLegacyConnection(ctx);const fiber=ctx.plugin(plugin,{loginOrigin:'https://login.example.test',databasePath:':memory:',serviceId:'fixture-service',ssh:{account:'alice',host:'example.test',identityFile:resolve('fixture-key'),knownHostsFile:resolve('fixture-known-hosts')}});await fiber.await();
  const client=fiber.ctx.get('collaborationMemberClient'),service=new FakeService();
  client.requireLogin=false; // Legacy attachment fixture; secure login has independent tests.
  client.connect=async()=>{const peer=service.connect(),request=peer.request.bind(peer);peer.request=async(method,params)=>method==='initialize'?{...(await request(method,params)),agentCapabilities:{attachmentTransfer:{version:1}}}:request(method,params);return peer;};

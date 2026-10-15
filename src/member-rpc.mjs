@@ -22,6 +22,7 @@ export function installMemberRpc(ctx,{entry,client:fixedClient,status:fixedStatu
       const {method,payload}=message.payload;
       const client=entry?.client??fixedClient,configuration=entry?.status??fixedStatus;
       const run=(name,...args)=>entry?entry.run(name,...args):client[name](...args);
+      if(method==='configuration.address'&&exact(payload,['origin'])&&entry?.configure)return reply(rpcId,{ok:true,value:await entry.configure(payload.origin)});
       if(method==='configuration.list'&&exact(payload,[])&&entry)return reply(rpcId,{ok:true,value:entry.candidates()});
       if(method==='configuration.select'&&exact(payload,['id'])&&entry)return reply(rpcId,{ok:true,value:entry.select(payload.id)});
       if(method==='configuration.auto'&&exact(payload,[])&&entry)return reply(rpcId,{ok:true,value:entry.reset()});
@@ -33,6 +34,7 @@ export function installMemberRpc(ctx,{entry,client:fixedClient,status:fixedStatu
       if(method==='login.start'&&exact(payload,[]))data=await run('beginLogin');
       else if(method==='login.claim'&&exact(payload,[]))data=await run('completeLogin');
       else if(method==='login.logout'&&exact(payload,[]))data=await run('logout');
+      else if(method==='administration'&&payload&&typeof payload==='object'&&client.management)data=await run('management',payload);
       else if(method==='project.list'&&exact(payload,[]))data={projects:await run('projects')};
       else if(method==='project.menu'&&exact(payload,['localId']))data=await projects.menu(payload.localId);
       else if(method==='project.activate'&&exact(payload,['localId','projectId','scopeId']))data=await projects.activate(payload);

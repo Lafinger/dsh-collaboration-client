@@ -27,7 +27,7 @@ export async function loadBrowserThroughDsh(packageRoot,{react={createElement:()
     const target={mode:'queue',pendingQueue:[],load(registration){this.pendingQueue.push(registration);}};
     const windowFacade={__ModuleLoader__:target};if(globalThis.window)for(const key of ['innerWidth','innerHeight'])windowFacade[key]=globalThis.window[key];
     if(globalThis.window)for(const key of ['addEventListener','removeEventListener'])windowFacade[key]=globalThis.window[key].bind(globalThis.window);
-    const context=vm.createContext({window:windowFacade,document:globalThis.document,Date,queueMicrotask});
+    const context=vm.createContext({window:windowFacade,document:globalThis.document,Date,queueMicrotask,setTimeout,clearTimeout,crypto:globalThis.crypto,confirm:globalThis.confirm});
     // Use the official browser module system, not an ad-hoc require/module substitute.
     let bootstrap;
     const coreManifest=require.resolve('@deepseek-ai/dsh-client-modules/package.json');

@@ -4,6 +4,7 @@ import { Context } from '@deepseek-ai/cordis';
 import { LlmRuntime, createUserMessage } from '@deepseek-ai/dsh-llm';
 import { SessionStore } from '@deepseek-ai/dsh-session';
 import * as plugin from '../src/member-plugin.mjs';
+import {installLegacyConnection} from './helpers/legacy-connection.mjs';
 import { MemberAdapter } from '../src/member-plugin.mjs';
 import { resolve } from 'node:path';
 
@@ -12,7 +13,7 @@ test('plugin mounts actual adapter and recovery snapshot is non-user local conte
   await llmFiber.await(); await sessionFiber.await();
   const session = ctx.sessions.create('local-recovery');
   ctx.provide('agents', { get: id => id === session.id ? { session } : undefined });
-  const fiber = ctx.plugin(plugin, {
+  installLegacyConnection(ctx);const fiber = ctx.plugin(plugin, {
     loginOrigin:'https://login.example.test',databasePath: ':memory:', serviceId: 'test', provider: 'collaboration-remote', ssh: { account: 'alice', host: 'example.test', identityFile: resolve('fixture-key'), knownHostsFile: resolve('fixture-known-hosts') },
   });
   try {

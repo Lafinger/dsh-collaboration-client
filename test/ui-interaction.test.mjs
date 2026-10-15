@@ -10,7 +10,7 @@ test('settings identity panel selects/imports without hidden project/history cal
   if(method==='login.start'){pending=true;return{loginUrl:'https://login.example.test/collaboration/login/11111111-1111-1111-1111-111111111111'};}
   if(method==='login.claim'){authenticated=true;pending=false;return{authenticated:true};}if(method==='login.logout'){authenticated=false;pending=false;return{authenticated:false};}throw Error('Forbidden settings operation '+method);
  };
- let tree;await Renderer.act(async()=>{tree=Renderer.create(React.createElement(browser.CollaborationPanel,{call}));});
+ let tree;await Renderer.act(async()=>{tree=Renderer.create(React.createElement(browser.LegacyCollaborationPanel,{call}));});
  const button=text=>tree.root.findAllByType('button').find(b=>b.props.children===text);
  await Renderer.act(async()=>tree.root.findByType('select').props.onChange({target:{value:'one/collaboration-client.json'}}));
  await Renderer.act(async()=>button('使用所选配置').props.onClick());assert.ok(calls.some(c=>c.method==='configuration.select'));
@@ -24,7 +24,7 @@ test('settings identity panel selects/imports without hidden project/history cal
 test('identity panel serializes rapid double clicks before React state flush',async()=>{
  const {browser}=await loadBrowserThroughDsh(root,{react:React});let starts=0;const releases=[];const cfg={state:'configured'};
  const call=async method=>{if(method==='status')return{configuration:cfg,authenticated:false};if(method==='configuration.list')return{configuration:cfg,candidates:[]};if(method==='login.start'){starts++;return new Promise(resolve=>{releases.push(()=>resolve({loginUrl:'https://login.example.test/collaboration/login/11111111-1111-1111-1111-111111111111'}));});}throw Error(method);};
- let tree;await Renderer.act(async()=>{tree=Renderer.create(React.createElement(browser.CollaborationPanel,{call}));});const start=tree.root.findAllByType('button').find(b=>b.props.children==='发起钉钉扫码登录');
+ let tree;await Renderer.act(async()=>{tree=Renderer.create(React.createElement(browser.LegacyCollaborationPanel,{call}));});const start=tree.root.findAllByType('button').find(b=>b.props.children==='发起钉钉扫码登录');
  await Renderer.act(async()=>{const first=start.props.onClick(),second=start.props.onClick();for(const release of releases)release();await first;await second;});assert.equal(starts,1);await Renderer.act(async()=>tree.unmount());
 });
 // Current-session project states are exercised at the actual model slot in official-model-project.integration.mjs.

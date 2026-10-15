@@ -53,7 +53,7 @@ export class MemberClient {
         const params = initializeParams();
         if (this.attachments) params.clientCapabilities.attachmentTransfer = attachmentCapability();
         const initialized = await peer.request('initialize', params);
-        requireInitializeResult(initialized);
+        requireInitializeResult(initialized);this.validateInitialize?.(initialized);
         this.attachmentCapability = initialized.agentCapabilities?.attachmentTransfer ?? null;
         if (this.attachmentCapability) requireAttachmentCapability(this.attachmentCapability);
         this.loginRequired=this.requireLogin||initialized.authMethods?.some(m=>m.id==='dingtalk-device');

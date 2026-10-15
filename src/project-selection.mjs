@@ -34,6 +34,7 @@ export function createProjectSelection(ctx,{entry,client:fixedClient,status:fixe
   return{
     async state(localId){
       requireText(localId,'local sessionId',200);const client=current();return reserved(client,async()=>{
+        await client.restoreLogin?.();assertCurrent(client);
         let session=sessions?.get(localId);const attached=!!session;
         if(!session){const controller=ctx.get?.('sessionController');if(!controller?.inspect)throw new AccessError(-32004,'当前会话不可用，请重新打开会话。');const inspected=await controller.inspect(localId);session={header:inspected.meta,snapshotEvents:()=>inspected.events};}
         if(session.header?.origin==='subagent')throw new AccessError(-32004,'此会话不支持项目选择。');

@@ -10,3 +10,6 @@ business/lib-test/
 *.local.json
 *.pem
 *.key
+# Synthetic offline joint TLS fixture, never a deployment certificate.
+!test/joint/mvp-test-key.pem
+!test/joint/mvp-test-cert.pem

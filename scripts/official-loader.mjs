@@ -12,7 +12,9 @@ for (const name of ['dsh-llm', 'dsh-session']) {
 const parentURL = pathToFileURL(resolve(root, 'collaboration-prototype-resolution.mjs')).href;
 registerHooks({ resolve(specifier, context, nextResolve) {
   if (specifier.startsWith('@deepseek-ai/') || specifier === 'zod' || specifier.startsWith('zod/')) {
-    return nextResolve(specifier, { ...context, parentURL });
+    const originalParentURL=context.parentURL;
+    try{return nextResolve(specifier, { ...context, parentURL });}
+    catch(error){if(error.code!=='ERR_MODULE_NOT_FOUND')throw error;return nextResolve(specifier,{...context,parentURL:originalParentURL});}
   }
   return nextResolve(specifier, context);
 } });
