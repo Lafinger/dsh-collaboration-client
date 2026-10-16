@@ -7,10 +7,12 @@ import {openPcDingTalk,validatePcLoginTarget} from './pc-login-launcher.mjs';
 export class HttpsMemberClient extends MemberClient {
  constructor({vault,openLogin=openPcDingTalk,...options}){super({...options,account:'pending-official-login',requireLogin:true,loginOrigin:options.origin});this.origin=options.origin;this.vault=vault;this.openLogin=openLogin;this.loaded=false;this.lastLoginError=null;this.statusTask=null;this.claimTask=null;this.launchTask=null;}
  validateInitialize(value){if(value.serviceId!==this.serviceId||value.agentCapabilities?.mvpHttps!==true)throw new AccessError(-32011,'服务身份或MVP版本不匹配，不回退SSH');}
+ // Client-side sanity bound only; the server is authoritative for the unchanged expiry.
+ maximumFutureExpiry(lifetimeMs){return Date.now()+lifetimeMs;}
  async restoreLogin(){
   if(this.loaded)return;
   const saved=this.vault.load();if(!saved){this.loaded=true;return;}
-  if(saved.origin!==this.origin||saved.serviceId!==this.serviceId||typeof saved.account!=='string'||!saved.account.trim()||typeof saved.deviceId!=='string'||!saved.deviceId.trim()||typeof saved.token!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(saved.token)||!Number.isSafeInteger(saved.expiresAt)||saved.expiresAt>Date.now()+604800000)throw new AccessError(-32003,'加密登录归属或期限与当前服务不一致');
+  if(saved.origin!==this.origin||saved.serviceId!==this.serviceId||typeof saved.account!=='string'||!saved.account.trim()||typeof saved.deviceId!=='string'||!saved.deviceId.trim()||typeof saved.token!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(saved.token)||!Number.isSafeInteger(saved.expiresAt)||saved.expiresAt>this.maximumFutureExpiry(604800000))throw new AccessError(-32003,'加密登录归属或期限与当前服务不一致');
   if(saved.expiresAt<=Date.now()){this.vault.clear();this.loaded=true;return;}
   this.account=saved.account;this.deviceId=saved.deviceId;this.login=saved;this.loaded=true;
  }
@@ -41,7 +43,7 @@ export class HttpsMemberClient extends MemberClient {
   const p=this.pendingLogin;if(p.expiresAt<=Date.now()){this.pendingLogin=null;throw new AccessError(-32003,'电脑钉钉登录已过期，请明确发起新登录');}
   const peer=await this.ensureTransport(),result=await peer.request('collaboration/login/claim',{requestId:p.requestId,deviceId:this.deviceId,proof:p.proof});
   if(result.status==='pending')return {...this.authStatus(),pending:true};
-  if(result.status!=='authenticated'||result.serviceId!==this.serviceId||result.deviceId!==this.deviceId||typeof result.account!=='string'||!result.account.trim()||typeof result.token!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(result.token)||!Number.isSafeInteger(result.expiresAt)||result.expiresAt<=Date.now()||result.expiresAt>Date.now()+604800000)throw new AccessError(-32003,'电脑钉钉登录结果与原设备不匹配');
+  if(result.status!=='authenticated'||result.serviceId!==this.serviceId||result.deviceId!==this.deviceId||typeof result.account!=='string'||!result.account.trim()||typeof result.token!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(result.token)||!Number.isSafeInteger(result.expiresAt)||result.expiresAt<=Date.now()||result.expiresAt>this.maximumFutureExpiry(604800000))throw new AccessError(-32003,'电脑钉钉登录结果与原设备不匹配');
   // Save only encrypted data before admitting business. Failure revokes this just-issued login.
   try{this.vault.save({...result,origin:this.origin});}catch(error){try{await peer.request('collaboration/login/logout',{token:result.token,deviceId:this.deviceId});}catch{}this.pendingLogin=null;peer.close();throw error;}
   this.account=result.account;this.login=result;this.pendingLogin=null;this.loaded=true;await this.ensureConnected();return this.authStatus();
