@@ -1,10 +1,11 @@
 import {MemberClient} from './member-client.mjs';
 import {AccessError} from './protocol.mjs';
 import {randomBytes} from 'node:crypto';
+import {openPcDingTalk,validatePcLoginTarget} from './pc-login-launcher.mjs';
 
 /** Retains existing durable project/session/no-replay machinery; learns account only from official PC login. */
 export class HttpsMemberClient extends MemberClient {
- constructor({vault,...options}){super({...options,account:'pending-official-login',requireLogin:true,loginOrigin:options.origin});this.origin=options.origin;this.vault=vault;this.loaded=false;this.lastLoginError=null;this.statusTask=null;this.claimTask=null;}
+ constructor({vault,openLogin=openPcDingTalk,...options}){super({...options,account:'pending-official-login',requireLogin:true,loginOrigin:options.origin});this.origin=options.origin;this.vault=vault;this.openLogin=openLogin;this.loaded=false;this.lastLoginError=null;this.statusTask=null;this.claimTask=null;this.launchTask=null;}
  validateInitialize(value){if(value.serviceId!==this.serviceId||value.agentCapabilities?.mvpHttps!==true)throw new AccessError(-32011,'服务身份或MVP版本不匹配，不回退SSH');}
  async restoreLogin(){
   if(this.loaded)return;
@@ -24,8 +25,15 @@ export class HttpsMemberClient extends MemberClient {
   const started=await peer.request('collaboration/login/start',{deviceId:this.deviceId,proof});
   const url=new URL(started.loginUrl);
   if(url.origin!==this.origin||url.pathname!=='/collaboration/pc-login'||url.search||!/^#[A-Za-z0-9_-]{43}$/.test(url.hash)||!/^dingtalk:\/\/dingtalkclient\/action\/openapp\?/.test(started.openUrl)||!/^[A-F0-9]{16}$/.test(started.pairingCode))throw new AccessError(-32003,'服务器返回非预期电脑钉钉登录入口');
-  const jump=new URL(started.openUrl);if(jump.searchParams.get('redirect_url')!==started.loginUrl)throw new AccessError(-32003,'电脑钉钉跳转目标不匹配');
-  this.pendingLogin={...started,proof};this.lastLoginError=null;return {...started};
+  validatePcLoginTarget({origin:this.origin,loginUrl:started.loginUrl,openUrl:started.openUrl});
+  this.pendingLogin={...started,proof};this.lastLoginError=null;const launch=await this.openPendingLogin();return {...started,launch};
+ }
+ openPendingLogin(){if(this.launchTask)return this.launchTask;const task=Promise.resolve().then(()=>this.launchPendingLogin()).finally(()=>{if(this.launchTask===task)this.launchTask=null;});this.launchTask=task;return task;}
+ async launchPendingLogin(){
+  const pending=this.pendingLogin;if(this.stopped||this.login||!pending||pending.expiresAt<=Date.now())throw new AccessError(-32003,'没有可重新打开的本次登录，请在原DSH明确发起');
+  this.assertCurrent();validatePcLoginTarget({origin:this.origin,loginUrl:pending.loginUrl,openUrl:pending.openUrl});
+  try{const result=await this.openLogin({origin:this.origin,loginUrl:pending.loginUrl,openUrl:pending.openUrl});if(result?.status!=='requested')throw Error('Launch not accepted');return {status:'requested',message:'已请求打开电脑钉钉；请核对弹出的应用页面。系统受理不等于登录成功。'};}
+  catch{return {status:'failed',message:'未能自动打开电脑钉钉；可点“重新打开电脑钉钉”，或从电脑钉钉工作台进入同一应用核对本次请求。不自动发起第二次登录。'};}
  }
  completeLogin(){return this.claimTask??=(async()=>{try{return await this.claimLogin();}finally{this.claimTask=null;}})();}
  async claimLogin(){

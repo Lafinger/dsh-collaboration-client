@@ -42,7 +42,7 @@ export class HttpsConnection {
  async run(method,...args){
   if(!this.client)throw new AccessError(-32003,'请先输入协作HTTPS服务地址');
   if(this.stopped||this.changing)throw new AccessError(-32007,'连接正在改变');
-  if(['beginLogin','completeLogin','logout','management'].includes(method)&&(this.operations||this.client.busy.size||this.client.opening.size))throw new AccessError(-32007,'业务或管理操作中，请等候完成');
+  if(['beginLogin','openPendingLogin','completeLogin','logout','management'].includes(method)&&(this.operations||this.client.busy.size||this.client.opening.size))throw new AccessError(-32007,'业务或管理操作中，请等候完成');
   this.operations++;try{return await this.client[method](...args);}finally{this.operations--;}
  }
  close(){this.stopped=true;this.client?.close();}

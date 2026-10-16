@@ -29,7 +29,7 @@ class Peer extends EventEmitter{
  constructor(){super();this.closed=false;this.login=null;this.pending=false;this.confirmed=false;this.requests=[];}
  async request(method,p){this.requests.push(method);
   if(method==='initialize')return {protocolVersion:1,_meta:{collaborationProtocolVersion:3},authMethods:[{id:'dingtalk-device'}],serviceId:'one',agentCapabilities:{mvpHttps:true}};
-  if(method==='collaboration/login/start'){this.pending=true;return {requestId:'request',loginUrl:'https://mvp.example/collaboration/pc-login#'+'a'.repeat(43),openUrl:'dingtalk://dingtalkclient/action/openapp?redirect_url='+encodeURIComponent('https://mvp.example/collaboration/pc-login#'+'a'.repeat(43)),pairingCode:'A'.repeat(16),expiresAt:Date.now()+300000};}
+  if(method==='collaboration/login/start'){this.pending=true;return {requestId:'request',loginUrl:'https://mvp.example/collaboration/pc-login#'+'a'.repeat(43),openUrl:'dingtalk://dingtalkclient/action/openapp?corpid=ding-test&container_type=work_platform&app_id=0_123&redirect_type=jump&redirect_url='+encodeURIComponent('https://mvp.example/collaboration/pc-login#'+'a'.repeat(43)),pairingCode:'A'.repeat(16),expiresAt:Date.now()+300000};}
   if(method==='collaboration/login/claim'){if(!this.confirmed)return {status:'pending'};this.login={status:'authenticated',token:'a'.repeat(43),account:'official-member',name:'Official name',administrator:false,serviceId:'one',deviceId:p.deviceId,expiresAt:Date.now()+604800000};return this.login;}
   if(method==='collaboration/login/authenticate')return {authenticated:true,...this.login};
   if(method==='collaboration/whoami')return {account:'official-member',serviceId:'one'};
@@ -40,7 +40,7 @@ class Peer extends EventEmitter{
 }
 test('new client starts without preallocated account, polls once per status, saves official identity securely and restores without replay',async()=>{
  const root=mkdtempSync(join(tmpdir(),'mvp-client-')),vault=new LoginVault(join(root,'login.dpapi'),{crypt:fakeCrypt}),peer=new Peer();
- const options={origin:'https://mvp.example',databasePath:join(root,'mapping.sqlite'),serviceId:'one',vault,connect:async()=>peer};
+ const options={origin:'https://mvp.example',databasePath:join(root,'mapping.sqlite'),serviceId:'one',vault,openLogin:async()=>({status:'requested'}),connect:async()=>peer};
  const client=new HttpsMemberClient(options);const started=await client.beginLogin();assert.ok(started.openUrl.startsWith('dingtalk:'));assert.equal(client.account,'pending-official-login');
  assert.equal((await client.verifyAuthStatus()).pending,true);peer.confirmed=true;
  const simultaneous=await Promise.all([client.verifyAuthStatus(),client.verifyAuthStatus()]);assert.ok(simultaneous.every(r=>r.authenticated));assert.equal(peer.requests.filter(m=>m==='collaboration/login/claim').length,2);assert.equal(client.account,'official-member');client.close();

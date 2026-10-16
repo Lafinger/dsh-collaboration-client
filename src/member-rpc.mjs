@@ -33,6 +33,7 @@ export function installMemberRpc(ctx,{entry,client:fixedClient,status:fixedStatu
       let data;
       if(method==='login.start'&&exact(payload,[]))data=await run('beginLogin');
       else if(method==='login.claim'&&exact(payload,[]))data=await run('completeLogin');
+      else if(method==='login.open'&&exact(payload,[])&&client.openPendingLogin)data=await run('openPendingLogin');
       else if(method==='login.logout'&&exact(payload,[]))data=await run('logout');
       else if(method==='administration'&&payload&&typeof payload==='object'&&client.management)data=await run('management',payload);
       else if(method==='project.list'&&exact(payload,[]))data={projects:await run('projects')};
