@@ -12,7 +12,7 @@ const fakeCrypt=(action,input)=>action==='protect'?Buffer.from('encrypted:'+inpu
 test('single service address rejects bare IP HTTP, credentials or callback paths; verifies exact remote origin and MVP version',async()=>{
  assert.equal(trustedOrigin('https://mvp.example/'),'https://mvp.example');
  for(const value of ['http://mvp.example','https://u:p@mvp.example','https://mvp.example/callback','https://mvp.example/#token'])assert.throws(()=>trustedOrigin(value));
- const info={serviceId:'one',origin:'https://mvp.example',mvpHttpsVersion:1,protocolVersion:3,loginMethod:'dingtalk-pc'};
+ const info={serviceId:'one',origin:'https://mvp.example',mvpHttpsVersion:2,protocolVersion:3,loginMethod:'dingtalk-qr'};
  assert.deepEqual(await readServiceInfo(info.origin,{fetchImpl:async()=>Response.json(info)}),info);
  await assert.rejects(readServiceInfo(info.origin,{fetchImpl:async()=>Response.json({...info,origin:'https://other.example'})}));
 });

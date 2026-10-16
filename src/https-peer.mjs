@@ -12,7 +12,7 @@ export async function readServiceInfo(origin,{fetchImpl=fetch}={}){
  if(!response.ok)throw new AccessError(-32011,'协作服务入口不可用或版本不匹配');
  let size=0,parts=[];for await(const chunk of response.body){size+=chunk.length;if(size>8192)throw new AccessError(-32011,'服务信息超限');parts.push(chunk);}
  let info;try{info=JSON.parse(Buffer.concat(parts).toString('utf8'));}catch{throw new AccessError(-32011,'服务信息不是预期JSON');}
- if(info.origin!==origin||info.mvpHttpsVersion!==1||info.loginMethod!=='dingtalk-pc'||info.protocolVersion!==3||typeof info.serviceId!=='string'||!info.serviceId.trim()||info.serviceId.length>200)throw new AccessError(-32011,'服务身份或双端MVP版本不匹配，不回退SSH');return info;
+ if(info.origin!==origin||info.mvpHttpsVersion!==2||info.loginMethod!=='dingtalk-qr'||info.protocolVersion!==3||typeof info.serviceId!=='string'||!info.serviceId.trim()||info.serviceId.length>200)throw new AccessError(-32011,'服务身份或双端MVP版本不匹配，不回退SSH');return info;
 }
 export async function openHttps(origin,{WebSocketClass=WebSocket}={}){
  origin=trustedOrigin(origin);const url=new URL('/collaboration/socket',origin);url.protocol='wss:';

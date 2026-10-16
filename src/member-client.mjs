@@ -50,7 +50,7 @@ export class MemberClient {
           }
           if (m.method === 'session/update') this.listeners.get(m.params?.sessionId)?.(m.params);
         });
-        const params = initializeParams();
+        const params = initializeParams();Object.assign(params.clientCapabilities,this.initializeCapabilities?.()??{});
         if (this.attachments) params.clientCapabilities.attachmentTransfer = attachmentCapability();
         const initialized = await peer.request('initialize', params);
         requireInitializeResult(initialized);this.validateInitialize?.(initialized);

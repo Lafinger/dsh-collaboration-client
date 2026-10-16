@@ -18,7 +18,7 @@ export async function createMountedMemberHost({sessions,setupHost,packageRoot=pr
   const llm=host.plugin(LlmRuntime);await llm.await();if(sessions)host.provide('sessions',sessions);if(setupHost)await setupHost(host);
   const plugin=await import(pathToFileURL(join(packageRoot,'src/member-plugin.mjs')).href);if(legacySsh)installLegacyConnection(host);const fiber=host.plugin(plugin);await fiber.await();
   assert.equal(fiber.state,2);const entry=fiber.ctx.get('collaborationMemberConnection');
-   if(configureMvpFixture){assert.equal(legacySsh,false);entry.readInfo=async()=>({serviceId:'fixture-mvp',mvpHttpsVersion:1,protocolVersion:3,loginMethod:'dingtalk-pc'});await entry.configure('https://mvp.example');}
+   if(configureMvpFixture){assert.equal(legacySsh,false);entry.readInfo=async()=>({serviceId:'fixture-mvp',mvpHttpsVersion:2,protocolVersion:3,loginMethod:'dingtalk-qr'});await entry.configure('https://mvp.example');}
    assert.ok(entry.client);
   const guard=client=>{client.connect=async()=>{remoteCalls++;throw Error('Real transport forbidden in offline Host fixture');};return client;};guard(entry.client);const create=entry.createClient;entry.createClient=config=>guard(create(config));
   return {host,entry,fiber,config,configPath,close,get remoteCalls(){return remoteCalls;}};

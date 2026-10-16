@@ -8,14 +8,14 @@ import { AttachmentAuthorization, explicitPaths } from './attachments.mjs';
 import { installMemberRpc } from './member-rpc.mjs';
 import { installProjectRouting } from './project-selection.mjs';
 import {HttpsConnection} from './https-connection.mjs';
-import {HttpsMemberClient} from './https-client.mjs';
+import {QrMemberClient} from './qr-client.mjs';
 import {openHttps} from './https-peer.mjs';
 import {LoginVault} from './login-vault.mjs';
 
 export const name = 'collaboration-client';
 export const inject = ['llm'];
 export const Config = z.object({
-  serviceUrl:z.string().description('MVP只需可信HTTPS服务地址；身份由电脑钉钉确定。'),
+  serviceUrl:z.string().description('MVP只需可信HTTPS服务地址；默认浏览器官方授权页用手机扫码，身份由实际授权者确定。'),
 
 });
 
@@ -82,7 +82,7 @@ export function apply(ctx, input = {}) {
     if ((!registration || config.provider !== adapter.provider) && ctx.llm.listProviders().some(row => row.id === config.provider)) throw new Error('所选配置provider已被其他组件使用');
     if (config.databasePath !== ':memory:') mkdirSync(dirname(config.databasePath), { recursive: true, mode: 0o700 });
     const attachments = new AttachmentAuthorization({ attachmentStore: ctx.get('attachments'), workspaceOf: localId => ctx.get('sessions')?.get(localId)?.header.cwd });
-    const mvp=config.mode==='mvp-https',Client=mvp?HttpsMemberClient:MemberClient;
+    const mvp=config.mode==='mvp-qr',Client=mvp?QrMemberClient:MemberClient;
     return new Client({ connect: () => mvp?openHttps(config.origin):openSsh(config.ssh), databasePath: config.databasePath, serviceId: config.serviceId, account: config.ssh?.account, attachments, requireLogin: true, loginOrigin: config.loginOrigin,...mvp?{origin:config.origin,vault:new LoginVault(config.vaultPath)}:{},
       onHistory: ({ localId, events, status }) => {
         const agent = ctx.get('agents')?.get(localId);

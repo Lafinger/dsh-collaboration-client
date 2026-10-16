@@ -19,7 +19,7 @@
     "collaboration",
     "dingtalk"
   ],
-  "description": "DSH collaboration MVP: one HTTPS address, official desktop DingTalk identity, protected seven-day login and no-replay project sessions.",
+  "description": "DSH collaboration MVP: one HTTPS address, official browser DingTalk QR login, protected seven-day device identity and preserved no-replay project sessions.",
   "engines": {
     "node": ">=24.0.0",
     "dsh": "0.2.0-rc.2"

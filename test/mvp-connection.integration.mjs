@@ -17,10 +17,10 @@ test('actual default plugin ignores personal SSH JSON and keeps settings ready; 
  try{
   await host.plugin(LlmRuntime).await();const fiber=host.plugin(plugin,{legacySsh:true,ssh:{account:'old-account'}});await fiber.await();const entry=fiber.ctx.get('collaborationMemberConnection');
   assert.ok(entry instanceof HttpsConnection);assert.equal(entry.client,null);assert.equal(entry.status.state,'configuration-required');
-  entry.readInfo=async origin=>({origin,serviceId:'mvp-server',mvpHttpsVersion:1,protocolVersion:3,loginMethod:'dingtalk-pc'});
+  entry.readInfo=async origin=>({origin,serviceId:'mvp-server',mvpHttpsVersion:2,protocolVersion:3,loginMethod:'dingtalk-qr'});
   const create=entry.createClient;entry.createClient=config=>{const client=create(config);client.connect=async()=>{connects++;throw Error('No real remote requests in fixture');};return client;};
   installOfficialBrowserConnection(browser,host);const rpc=async(method,payload={})=>{const r=await browser.connection.rpc.call('/api','collaboration/member',{method,payload});assert.equal(r.ok,true,r.error?.message);return r.value;};
-  const configured=await rpc('configuration.address',{origin:'https://mvp.example'});assert.equal(configured.mode,'mvp-https');assert.equal(configured.serviceId,'mvp-server');
+  const configured=await rpc('configuration.address',{origin:'https://mvp.example'});assert.equal(configured.mode,'mvp-qr');assert.equal(configured.serviceId,'mvp-server');
   assert.equal(entry.client.account,'pending-official-login');assert.equal(entry.client.peer,null);assert.equal((await rpc('status')).authenticated,false);assert.equal(connects,0);
   assert.ok((await host.llm.listModels('collaboration-remote')).some(m=>m.id==='server-agent'));
   await rpc('login.logout');assert.equal(connects,0);
