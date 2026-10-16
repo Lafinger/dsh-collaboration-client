@@ -17,7 +17,7 @@ test('MVP settings renders only address/PC identity for ordinary member and seri
 });
 test('MVP admin gets only create project and role controls, no member lifecycle or project ACL',async()=>{
  const {browser}=await loadBrowserThroughDsh(root,{react:React});let tree;
- const call=async method=>{if(method==='status')return {configuration:{state:'configured',origin:'https://mvp.example'},authenticated:true,name:'Admin',administrator:true,expiresAt:Date.now()+604800000};throw new Error(method);};
+ const call=async method=>{if(method==='status')return {configuration:{mode:'mvp-https',state:'configured',origin:'https://mvp.example'},authenticated:true,name:'Admin',administrator:true,expiresAt:Date.now()+604800000};throw new Error(method);};
  await Renderer.act(async()=>{tree=Renderer.create(React.createElement(browser.CollaborationPanel,{call}));});const text=JSON.stringify(tree.toJSON());
  assert.ok(tree.root.findAllByType('button').some(b=>b.props.children==='创建项目'));assert.ok(!/停用成员|恢复成员|新增管理员|项目权限/.test(text));await Renderer.act(async()=>tree.unmount());
 });

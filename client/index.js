@@ -47,23 +47,25 @@ export function LegacyCollaborationPanel({call}){
 export function CollaborationPanel({call}){
  const [status,setStatus]=React.useState(null),[origin,setOrigin]=React.useState(''),[request,setRequest]=React.useState(null),[error,setError]=React.useState(''),[busy,setBusy]=React.useState(false);
  const [view,setView]=React.useState(null),[projectId,setProjectId]=React.useState(''),[key,setKey]=React.useState(''),[name,setName]=React.useState(''),[role,setRole]=React.useState(''),[account,setAccount]=React.useState('');
- const running=React.useRef(false),mounted=React.useRef(true);
- const refresh=async()=>{try{const next=await call('status',{});if(mounted.current){setStatus(next);if(next.configuration?.origin)setOrigin(next.configuration.origin);if(next.authenticated)setRequest(null);}return next;}catch(e){if(mounted.current){setStatus(null);setError(e.message);}throw e;}};
+ const running=React.useRef(false),mounted=React.useRef(true),incompatible=React.useRef(false);
+ const [backendMismatch,setBackendMismatch]=React.useState(false);
+ const restartMessage='页面已是新版，但DSH协作后台仍是旧版。请从托盘完整退出DSH后重新打开，再填写HTTPS地址；刷新页面或停用再启用不能重新加载旧模块。不要导入JSON或配置SSH。';
+ const refresh=async()=>{try{const next=await call('status',{});const mismatch=!!next.configuration&&next.configuration.mode!=='mvp-https'&&next.configuration.source!=='https-mvp';const previous=incompatible.current;incompatible.current=mismatch;if(mounted.current){setBackendMismatch(mismatch);if(mismatch){setStatus(null);setRequest(null);setView(null);setError(restartMessage);}else{setStatus(next);if(previous)setError('');if(next.configuration?.origin)setOrigin(next.configuration.origin);if(next.authenticated)setRequest(null);}}return mismatch?null:next;}catch(e){if(mounted.current){setStatus(null);setError(e.message);}throw e;}};
  React.useEffect(()=>{mounted.current=true;refresh().catch(e=>setError(e.message));return()=>{mounted.current=false;};},[call]);
  React.useEffect(()=>{if(!request)return;let stopped=false,timer;const tick=async()=>{try{await refresh();}catch(e){if(!stopped){setError(e.message);setRequest(null);}}if(!stopped)timer=setTimeout(tick,1800);};timer=setTimeout(tick,1200);return()=>{stopped=true;clearTimeout(timer);};},[request,call]);
- const run=fn=>async()=>{if(running.current)return;running.current=true;setBusy(true);setError('');try{await fn();}catch(e){setError(e.message||'操作未完成；请核对实际状态，不自动重试。');}finally{running.current=false;if(mounted.current)setBusy(false);}};
+ const run=(fn,{allowMismatch=false}={})=>async()=>{if(running.current)return;if(incompatible.current&&!allowMismatch){setError(restartMessage);return;}running.current=true;setBusy(true);setError('');try{await fn();}catch(e){setError(e.message||'操作未完成；请核对实际状态，不自动重试。');}finally{running.current=false;if(mounted.current)setBusy(false);}};
  const admin=async id=>{const next=await call('administration',{action:'view',...id?{projectId:id}:{}});setView(next);if(id)setProjectId(id);return next;};
  const command=()=>globalThis.crypto.randomUUID();
  return h('section',{'aria-label':'协作服务',style:{padding:16,maxWidth:840}},
   h('h2',null,'协作服务'),h('p',null,'一个服务地址，使用电脑钉钉登录。登录后在会话模型菜单的 Collaboration 分组选择项目。'),
-  h('div',{style:card},h('h3',null,'服务连接'),h('label',null,'HTTPS服务地址 ',h('input',{'aria-label':'HTTPS服务地址',type:'url',value:origin,placeholder:'https://协作服务域名',disabled:busy||status?.switchRequiresLogout,onChange:e=>setOrigin(e.target.value)})),
-   button('保存并连接',run(async()=>{await call('configuration.address',{origin});await refresh();}),busy||status?.switchRequiresLogout),
-   h('p',{role:'status'},status?.configuration?.message??(error?'协作状态读取失败，请核对下方错误；未确认登录。':'正在读取协作状态…'))),
+  h('div',{style:card},h('h3',null,'服务连接'),h('label',null,'HTTPS服务地址 ',h('input',{'aria-label':'HTTPS服务地址',type:'url',value:origin,placeholder:'https://协作服务域名',disabled:busy||backendMismatch||status?.switchRequiresLogout,onChange:e=>setOrigin(e.target.value)})),
+   button('保存并连接',run(async()=>{await call('configuration.address',{origin});await refresh();}),busy||backendMismatch||status?.switchRequiresLogout),
+   h('p',{role:'status'},backendMismatch?restartMessage:status?.configuration?.message??(error?'协作状态读取失败，请核对下方错误；未确认登录。':'正在读取协作状态…'))),
   h('div',{style:card},h('h3',null,'电脑钉钉登录'),h('p',{role:'status'},status?.authenticated?`已登录：${status.name??status.account}${status.administrator?'（项目管理员）':''}，有效至 ${new Date(status.expiresAt).toLocaleString()}`:'尚未登录；请先在电脑钉钉登录本组织账号。'),
    button('电脑钉钉登录',run(async()=>{const next=await call('login.start',{});setRequest(next);}),busy||status?.configuration?.state!=='configured'||status?.authenticated||!!request),
    request?h('div',null,h('p',null,h('a',{href:request.openUrl,rel:'noreferrer'},'在电脑钉钉中打开并确认本次登录')),
     h('p',null,'核对码：',h('strong',null,request.pairingCode),'。若未自动打开，在电脑钉钉工作台进入同一应用核对本次请求；无需手机扫码。'),h('p',null,'确认后此处自动完成登录，请勿使用他人发来的链接或核对码。')):null,
-   button('刷新状态',run(refresh),busy),button('退出当前设备',run(async()=>{try{await call('login.logout',{});}finally{setRequest(null);setView(null);await refresh();}}),busy||status?.busy),
+   button('刷新状态',run(refresh,{allowMismatch:true}),busy),button('退出当前设备',run(async()=>{try{await call('login.logout',{});}finally{setRequest(null);setView(null);await refresh();}}),busy||backendMismatch||status?.busy),
    h('p',null,'登录记忆最多7天，退出仅影响当前设备。所有有效成员可见全部项目，私人对话不会共享。')),
   status?.authenticated&&status?.administrator?h('div',{style:card},h('h3',null,'创建项目与角色分配'),
    h('p',null,'仅管理员可建项目和安排角色。角色候选来自已自行登录的成员，无成员管理或项目授权步骤。'),

@@ -15,7 +15,7 @@ test('official Host→module→entry-start→settings shell renders the sidebar 
   const rendererFiber=ctx.plugin(renderer);await rendererFiber.await();ctx.slots.onEntryError((key,_entry,error)=>slotErrors.push({key,message:String(error)}));
   const localeSnapshot={revision:0},dictionaries=new Map();const locale={getSnapshot:()=>localeSnapshot,subscribe:()=>()=>{},register:(ns,dict)=>{dictionaries.set(ns,dict.zh);return()=>dictionaries.delete(ns);},bind:ns=>key=>dictionaries.get(ns)?.[key]??key};
   ctx.provide('locale',locale);ctx.slots.installLocale(locale);
-  fixture=await createMountedMemberHost();installOfficialBrowserConnection(ctx,fixture.host,{observe:row=>calls.push(row.method)});
+  fixture=await createMountedMemberHost({legacySsh:false,configureMvpFixture:true});installOfficialBrowserConnection(ctx,fixture.host,{observe:row=>calls.push(row.method)});
   const remote={$host:{isLoopback:false},$on:()=>()=>{},settings:{}};ctx.provide('remote',remote);ctx.provide('remote.settings',remote.settings);
   ctx.provide('configForms',{developerTools:{enabled:createSnapshotStore(false),setEnabled:async()=>{}},describe:()=>createSnapshotStore({})});ctx.provide('shortcuts',{catalog:createSnapshotStore([]),register:()=>()=>{}});
   ctx.slots.provideRoot({hooks:{sessions:createSnapshotStore({phase:'ready',byId:{}})}});

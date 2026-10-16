@@ -29,7 +29,7 @@ export function installMemberRpc(ctx,{entry,client:fixedClient,status:fixedStatu
       if(method==='configuration.import'&&exact(payload,['json'])&&entry)return reply(rpcId,{ok:true,value:entry.importConfig(payload.json)});
       if(method==='configuration.refresh'&&exact(payload,[])&&entry)return reply(rpcId,{ok:true,value:await entry.refresh()});
       if(method==='status'&&exact(payload,[]))return reply(rpcId,{ok:true,value:{configuration,...(client?await run('verifyAuthStatus'):{authenticated:false}),busy:!!(entry?.operations||client?.busy?.size),switchRequiresLogout:!!(client?.login||client?.pendingLogin)}});
-      if(!client)return reply(rpcId,{ok:false,error:{code:'configuration-required',message:'请在设置 → 协作服务选择或导入成员连接配置。',details:{}}});
+      if(!client)return reply(rpcId,{ok:false,error:{code:'configuration-required',message:entry?.configure?'请先在设置 → 协作服务输入HTTPS服务地址并保存连接。':'请在设置 → 协作服务选择或导入成员连接配置。',details:{}}});
       let data;
       if(method==='login.start'&&exact(payload,[]))data=await run('beginLogin');
       else if(method==='login.claim'&&exact(payload,[]))data=await run('completeLogin');

@@ -5,7 +5,7 @@ test('actual admin form selects project before roles, confirms create/assignment
  const root=fileURLToPath(new URL('..',import.meta.url)),prior=globalThis.confirm;globalThis.confirm=()=>true;let tree;const calls=[];
  try{
   const {browser}=await loadBrowserThroughDsh(root,{react:React});let roles=[{role:'frontend',label:'前端',member:null}];
-  const call=async(method,payload)=>{calls.push({method,payload});if(method==='status')return {configuration:{state:'configured',origin:'https://mvp.example'},authenticated:true,administrator:true,name:'Admin',account:'admin',expiresAt:Date.now()+100000};
+  const call=async(method,payload)=>{calls.push({method,payload});if(method==='status')return {configuration:{mode:'mvp-https',state:'configured',origin:'https://mvp.example'},authenticated:true,administrator:true,name:'Admin',account:'admin',expiresAt:Date.now()+100000};
    if(method==='administration'){if(payload.action==='create')return {project:{id:'p'}};if(payload.action==='role'){roles=[{...roles[0],member:payload.account}];return {ok:true};}return {projects:[{id:'p',key:'P',name:'Project'},{id:'q',key:'Q',name:'Other'}],members:[{account:'member',name:'Member'}],...payload.projectId?{project:{id:payload.projectId,roles},revision:'current-revision'}:{}};}throw Error(method);};
   await Renderer.act(async()=>{tree=Renderer.create(React.createElement(browser.CollaborationPanel,{call}));});
   const input=name=>tree.root.find(n=>n.props['aria-label']===name),button=text=>tree.root.findAllByType('button').find(n=>n.props.children===text);
