@@ -2,7 +2,7 @@
 
 ## 当前结果
 
-配套服务已完成保留数据的网页扫码切换，旧PC入口及临时验证入口已关闭。**A/B本人扫码、完整重启记忆、本机退出隔离、测试项目／两职责与B共享可见已真人确认通过；真实模型只读、实际TXT首次归档及固定版本分析也已通过；方案已登记但本人确认被服务端资格缓存检查拒绝，正式决定及成果闭环尚未完成。** 不把后台脚本当作GUI观察，也不宣称已经等时实测满7天。
+配套服务已完成保留数据的网页扫码切换，旧PC入口及临时验证入口已关闭。**A/B本人扫码、完整重启记忆、本机退出隔离、共享项目／两职责、真实模型、实际TXT归档与固定版本分析、双方本人确认、两任务／一依赖、前端本人完成、产品独立accept及自己的成果完成均通过。2026-10-17权威只读核对与真人回执一致：两任务完成、两份本人成果评审、待评审0／待验收0，原身份／会话和设备到期保持。** [完整终验](<https://github.com/Lafinger/dsh-collaboration-acp-server/blob/main/docs/MVP-MINIMAL-FLOW-ACCEPTANCE-2026-10-17.md>)仅代表本次最小联调，不代表开发新功能或修完延期UI，不把脚本当GUI观察，也不声称已等时实测满7天。
 
 B曾报“服务器返回的扫码请求期限或入口不匹配”；[有界时钟修复](<MVP-QR-CLOCK-JITTER-2026-10-16.md>)交付后，用户选择“扫码与重启均通过，A未掉线”，随后本机退出隔离选择“全部通过”。本故障已有真实B复验闭环，服务端及A已有登录未改变。管理区下拉框偶现已按用户要求[登记延期](<KNOWN-ISSUES.md>)，不作为当前业务测试的阻断，不冒称已修复。
 
@@ -30,7 +30,7 @@ github:Lafinger/dsh-collaboration-client#fd8db1d91fe598f4f98101b345d75154a6cbfdf
 
 安装后从托盘完整退出DSH再重新打开；仅刷新／停用启用可能混载旧后台。不要手工覆盖桌面依赖或清理普通会话。配置仍只用原可信HTTPS地址`https://login.lafinger.us.ci`，计算机保持原LAN／ZeroTier，手机使用普通Wi-Fi／移动网络，不要求手机安装ZeroTier。
 
-配套正式服务运行`5209fa1eaf4b8f2d568148c487bb8771a78dda22`，已核验[服务端固定CI38864274126](<https://github.com/Lafinger/dsh-collaboration-acp-server/actions/runs/38864274126>)和原始包一致性，沿用原serviceId／成员／角色／业务／私人会话归属／epoch。认证升级只一次撤销旧PC设备，不清库、不轮换epoch或成员revision来强制重登。后续文档提交不等于替换现用客户端或升级服务器，不需要为此重装。
+配套正式服务初始认证切换为`5209fa1`，后续资格缓存修复已按固定[CI38891087766](<https://github.com/Lafinger/dsh-collaboration-acp-server/actions/runs/38891087766>)部署为`73d002e15e52d5b8380d006a94d5e9035d899609`，269公开文件／140运行文件核验原包一致，最终只读检查仍匹配。沿用原serviceId／成员／角色／业务／私人会话归属／epoch及7天到期；认证升级审计仍仅1次，后续修复未再撤设备／清库／改revision或epoch。文档提交不替换现用客户端或再次升级服务器，无需为此重装或重扫。
 
 ## 已有证据与边界
 
@@ -47,8 +47,11 @@ github:Lafinger/dsh-collaboration-client#fd8db1d91fe598f4f98101b345d75154a6cbfdf
 | MVPQR01项目、产品=陈锦鸿／前端=陈大海、B可见 | 用户报告“完成了，确认通过”；不重复创建或分配 |
 | A/B新项目会话真实模型只读账号／项目ID／职责 | 用户已提供两份实际session_whoami／project_list／project_get输出：身份来源dingtalk、不同账号与会话、同一项目ID，分别product／frontend，未写入业务 |
 | 实际TXT附件首次归档及固定版本分析 | transfer→inspect→archive→analysis_begin→analysis_submit成功，原件hash一致，共享资料v1，scope只含该版本、read1／unreadable0，无视觉声明 |
-| 待确认方案 | 已登记v1，仅product/frontend及两项拟议依赖任务；重复请求读取已有方案，未再次登记；两槽未决、未生效 |
-| 方案本人确认／真实任务及成果闭环 | **产品本人确认被PROJECT_ACCESS_DENIED拒绝，读回仍双未决／0任务；服务端资格缓存复核修复待固定CI／保留部署／真人复验** |
+| 方案与本人确认 | 仅v1，product/frontend各本人有效agree；A单独同意时0任务，B同意后恰好一次生效，自动派生两任务／一依赖，没有重复登记 |
+| 提交与完成分离 | 前端成果v1提交后评审未决、任务未完成；B本人以frontend评审complete后前端才完成，产品仍待独立接受 |
+| 产品独立接受与本人成果 | A以自己的product任务accept固定前端v1，提交并以product评审自己的成果complete；重复请求复用已有accept和成果，只补未完成评审，不替前端决定 |
+| 权威只读终验 | 2026-10-17确认原件1331字节hash、固定scope／版本／署名／来源一致，2任务完成／2成果本人评审／1输入接受／0待评审／0待验收；会话归属、设备token／epoch／到期行保留 |
+| 资格缓存误拒绝 | 服务端固定73d002e／CI38891087766／原包核验／保留部署及A/B本人正向复验均完成；未放宽权限或延长期限 |
 | 管理区下拉偶现不展开 | [MVP-UI-001](<KNOWN-ISSUES.md>)已登记，用户要求延期，不冒称修复 |
 
 官方授权页可能有其他官方登录选项；真实手机扫码结果来自本人确认，而非仅从通用OAuth结果推定。重启记忆通过不代表到期7天边界已经等时实测，固定期限和不续期另有自动化覆盖。
@@ -66,10 +69,10 @@ github:Lafinger/dsh-collaboration-client#fd8db1d91fe598f4f98101b345d75154a6cbfdf
 
 上述步骤通过后，由B明确点“退出当前设备”，确认B已未登录；A仍保持原本人登录和原到期。B再用本人手机重新扫码。若失败或结果未知先反馈准确错误，不批量撤销设备、删除配置、重置数据库或重复未知请求。
 
-## 当前待完成：正式确认与业务后半段
+## 已完成的真实业务闭环（回顾，不需重做）
 
 身份、设备及项目／职责门槛均已通过，不再重复创建项目。A/B分别新建私人测试会话，明确选择既有MVPQR01，并由各人明确发送一次只读查询，核对实际账号、同一项目标识／名称／ID及各自职责。该步骤由本人实际调用真实模型，用户已提供两份工具输出，核对同一项目／不同账号与会话、product／frontend职责及dingtalk身份来源通过；背景／目标为空保持未填，不猜补。
 
-实际TXT归档、固定版本分析和只涉及product/frontend的待确认方案也已完成，不重复上传、分析或登记方案。当前产品本人确认被服务端资格缓存检查拒绝；暂停确认重试，待[服务端修复](<https://github.com/Lafinger/dsh-collaboration-acp-server/blob/main/docs/MVP-PLAN-CONFIRM-QUALIFICATION-2026-10-16.md>)通过固定CI、保留部署后，由两人各自决定自己的职责。只有方案生效后才产生前端文字回执及依赖它的产品验收两个任务，各自本人评审、产品下游独立接受，形成最小闭环。只做必要步骤，不自动调用模型、不代职责人确认；失败或未知结果先读实际状态，不重发业务。项目共享不等于共享私人聊天，既有会话不能换项目。
+实际TXT归档、固定版本分析和只涉及product/frontend的方案均只登记一次。原正确职责确认被其他成员的过期资格缓存误拒绝，已由[服务端修复](<https://github.com/Lafinger/dsh-collaboration-acp-server/blob/main/docs/MVP-PLAN-CONFIRM-QUALIFICATION-2026-10-16.md>)通过固定CI、原包与保留部署解决。A本人同意product仍等待B；B本人同意frontend后原规则激活并自动派生两任务。B提交文字回执后仍未完成，再本人complete；产品仍待独立接受，A再明确accept固定前端v1并提交／complete自己的验收结论。重复请求读实际状态、复用已存在记录，只补尚未完成的本人步骤；最终两任务完成、两份本人成果评审、一个固定输入版本接受、0本次待决均获只读核验。详见[最终验收](<https://github.com/Lafinger/dsh-collaboration-acp-server/blob/main/docs/MVP-MINIMAL-FLOW-ACCEPTANCE-2026-10-17.md>)，这些步骤不需再执行。助手未代发模型或业务决定；项目共享不等于共享私人聊天，既有会话不能换项目，原背景／目标仍未补填。
 
 其余用法见[扫码指南](<MVP-WEB-QR.md>)；历史PC／个人SSH材料不是回退入口。
