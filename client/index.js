@@ -49,13 +49,23 @@ export function CollaborationPanel({call}){
  const [view,setView]=React.useState(null),[projectId,setProjectId]=React.useState(''),[key,setKey]=React.useState(''),[name,setName]=React.useState(''),[role,setRole]=React.useState(''),[account,setAccount]=React.useState('');
  const running=React.useRef(false),mounted=React.useRef(true),incompatible=React.useRef(false);
  const [backendMismatch,setBackendMismatch]=React.useState(false);
+ const [assignmentCheck,setAssignmentCheck]=React.useState(null),pendingAssignment=React.useRef(null);
+ const rememberAssignment=value=>{pendingAssignment.current=value;if(mounted.current)setAssignmentCheck(value);};
  const restartMessage='页面已是新版，但DSH协作后台仍是旧版。请从托盘完整退出DSH后重新打开，再填写HTTPS地址；刷新页面或停用再启用不能重新加载旧模块。不要导入JSON或配置SSH。';
  const refresh=async()=>{try{const next=await call('status',{});const mismatch=!!next.configuration&&next.configuration.webQrLogin!==1;const previous=incompatible.current;incompatible.current=mismatch;if(mounted.current){setBackendMismatch(mismatch);if(mismatch){setStatus(null);setRequest(null);setView(null);setError(restartMessage);}else{setStatus(next);if(previous)setError('');if(next.configuration?.origin)setOrigin(next.configuration.origin);if(next.error)setError(next.error);if(next.authenticated||!next.pending)setRequest(null);else setRequest(current=>current??{expiresAt:next.pendingExpiresAt,launch:{status:'pending',message:next.cancelUnknown?'取消结果尚未确认，请刷新核对原请求。':next.pendingRecovery?'正在核对原请求，不会自动弹浏览器。':'原扫码请求仍在等待，可明确重新打开或取消。'}});}}return mismatch?null:next;}catch(e){if(mounted.current){setStatus(null);setError(e.message);}throw e;}};
  React.useEffect(()=>{mounted.current=true;refresh().catch(e=>setError(e.message));return()=>{mounted.current=false;};},[call]);
  React.useEffect(()=>{if(!request)return;let stopped=false,timer;const tick=async()=>{let waiting=true;try{const next=await refresh();waiting=next?.pending===true;if(waiting&&next?.cancelUnknown)waiting=false;}catch(e){waiting=false;if(!stopped)setError(e.message);}if(!stopped&&waiting)timer=setTimeout(tick,1800);};timer=setTimeout(tick,1200);return()=>{stopped=true;clearTimeout(timer);};},[request,call]);
  const run=(fn,{allowMismatch=false}={})=>async()=>{if(running.current)return;if(incompatible.current&&!allowMismatch){setError(restartMessage);return;}running.current=true;setBusy(true);setError('');try{await fn();}catch(e){setError(e.message||'操作未完成；请核对实际状态，不自动重试。');}finally{running.current=false;if(mounted.current)setBusy(false);}};
- const admin=async id=>{const next=await call('administration',{action:'view',...id?{projectId:id}:{}});setView(next);if(id)setProjectId(id);return next;};
+ const admin=async id=>{const next=await call('administration',{action:'view',...id?{projectId:id}:{}});if(!mounted.current)return next;setView(next);if(id)setProjectId(id);if(id&&next.project?.id===id&&typeof next.revision==='string'&&pendingAssignment.current?.projectId===id)rememberAssignment(null);return next;};
  const command=()=>globalThis.crypto.randomUUID();
+ const assignRole=async()=>{
+  if(pendingAssignment.current)throw new Error('请先读取原项目核对上次角色分配，不重复提交。');
+  if(!globalThis.confirm('确认修改角色？换人会暂停相关未生效方案，不能继承前任确认。'))return;
+  try{await call('administration',{action:'role',commandId:command(),projectId,role,account:account||null,revision:view.revision});}
+  catch(e){if(e.outcome==='unknown'){rememberAssignment({projectId,kind:'unknown'});throw new Error('角色分配结果未确认，请先读取原项目核对实际分配；不会自动重试。');}throw e;}
+  rememberAssignment({projectId,kind:'saved'});
+  try{await admin(projectId);}catch{throw new Error('角色分配已保存，但重新读取项目失败；请重新读取原项目，不要重复分配。');}
+ };
  return h('section',{'aria-label':'协作服务',style:{padding:16,maxWidth:840}},
   h('h2',null,'协作服务'),h('p',null,'一个服务地址，在默认浏览器用手机钉钉扫码登录。电脑无需安装钉钉；登录后在会话模型菜单的 Collaboration 分组选择项目。'),
   h('div',{style:card},h('h3',null,'服务连接'),h('label',null,'HTTPS服务地址 ',h('input',{'aria-label':'HTTPS服务地址',type:'url',value:origin,placeholder:'https://协作服务域名',disabled:busy||backendMismatch||status?.switchRequiresLogout,onChange:e=>setOrigin(e.target.value)})),
@@ -80,7 +90,8 @@ export function CollaborationPanel({call}){
     view.project?.id===projectId?h('div',null,h('ul',null,...view.project.roles.map(r=>h('li',{key:r.role},r.label+'：'+(view.members.find(m=>m.account===r.member)?.name??r.member??'空缺')))),
      h('label',null,'职责 ',h('select',{'aria-label':'职责',value:role,disabled:busy,onChange:e=>setRole(e.target.value)},h('option',{value:''},'请选择'),...view.project.roles.map(r=>h('option',{key:r.role,value:r.role},r.label)))),
      h('label',null,'成员 ',h('select',{'aria-label':'角色成员',value:account,disabled:busy,onChange:e=>setAccount(e.target.value)},h('option',{value:''},'空缺'),...view.members.map(m=>h('option',{key:m.account,value:m.account},m.name)))),
-     button('确认角色分配',run(async()=>{if(!globalThis.confirm('确认修改角色？换人会暂停相关未生效方案，不能继承前任确认。'))return;await call('administration',{action:'role',commandId:command(),projectId,role,account:account||null,revision:view.revision});await admin(projectId);}),busy||!role)):null):null):null,
+     button('确认角色分配',run(assignRole),busy||!role||!!assignmentCheck)):null):null):null,
+   assignmentCheck&&status?.authenticated&&status?.administrator?h('div',{style:card},h('p',{role:'status'},assignmentCheck.kind==='saved'?'角色分配已保存，但重新读取项目失败；请核对原项目，不要重复分配。':'角色分配结果未确认；请核对原项目，不会自动重试。'),button('核对上次角色分配',run(async()=>{setRole('');setAccount('');await admin(pendingAssignment.current.projectId);}),busy)):null,
   errorView(error));
 }
 
@@ -88,18 +99,20 @@ export function apply(ctx){
   let configuration=null,connectionEpoch=0;const listeners=new Set();
   const snapshot={getSnapshot:()=>configuration,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn);}};
   const call=async(method,payload)=>{
+    const mutation=method==='project.activate'||method==='administration'&&['create','role'].includes(payload?.action);
     const epoch=connectionEpoch;let result;try{result=await ctx.connection.rpc.call('/api','collaboration/member',{method,payload});}catch(error){
       const status=/\bHTTP (\d{3})\b/.exec(error?.message??'')?.[1];
       const failure=new Error(status?`本机协作接口请求失败（HTTP ${status}）；请检查Host组件是否已启用，升级后重启DSH并刷新页面。`:'本机协作接口通信失败；请检查DSH连接，升级后重启DSH并刷新页面。');
-      if(method==='project.activate')failure.outcome='unknown';throw failure;
+      if(mutation)failure.outcome='unknown';throw failure;
     }
-    if(epoch!==connectionEpoch){const failure=new Error('本机连接已改变，请重新打开菜单。');if(method==='project.activate')failure.outcome='unknown';throw failure;}
+    if(epoch!==connectionEpoch){const failure=new Error('本机连接已改变，请重新打开菜单。');if(mutation)failure.outcome='unknown';throw failure;}
+    if(!result||typeof result!=='object'||Array.isArray(result)||typeof result.ok!=='boolean'){const failure=new Error('本机协作接口返回格式不兼容；管理写入结果须先核对，不自动重试。');if(mutation)failure.outcome='unknown';throw failure;}
     if(!result.ok){const failure=new Error(result.error?.message||'协作服务当前不可用');failure.outcome=result.error?.details?.outcome;throw failure;}
-    if(!result.value||typeof result.value!=='object'||Array.isArray(result.value)){const failure=new Error('本机协作接口返回格式不兼容；请将Host与页面升级到同一版本，重启DSH并刷新页面。');if(method==='project.activate')failure.outcome='unknown';throw failure;}
+    if(!result.value||typeof result.value!=='object'||Array.isArray(result.value)){const failure=new Error('本机协作接口返回格式不兼容；请将Host与页面升级到同一版本，重启DSH并刷新页面。');if(mutation)failure.outcome='unknown';throw failure;}
     if(method.startsWith('project.')&&['project.state','project.menu','project.activate'].includes(method)){
       const value=result.value,valid=value.localId===payload.localId&&typeof value.scopeId==='string'&&typeof value.authenticated==='boolean'&&typeof value.mapped==='boolean'&&typeof value.busy==='boolean'&&typeof value.uncertain==='boolean'&&(value.projectId===null||typeof value.projectId==='string')&&typeof value.provider==='string'&&typeof value.model==='string';
       const activated=method!=='project.activate'||value.projectId===payload.projectId&&value.scopeId===payload.scopeId&&value.busy===false&&value.uncertain===false&&value.selection?.provider===value.provider&&value.selection?.model===value.model;
-      if(!valid||!activated||method==='project.menu'&&(!Array.isArray(value.projects)||value.projects.some(project=>!project||typeof project.id!=='string'||typeof project.name!=='string'))){const failure=new Error('本机项目接口返回格式不兼容，请重启DSH并刷新页面。');if(method==='project.activate')failure.outcome='unknown';throw failure;}
+      if(!valid||!activated||method==='project.menu'&&(!Array.isArray(value.projects)||value.projects.some(project=>!project||typeof project.id!=='string'||typeof project.name!=='string'))){const failure=new Error('本机项目接口返回格式不兼容，请重启DSH并刷新页面。');if(mutation)failure.outcome='unknown';throw failure;}
     }
     const config=result.value?.configuration??(method.startsWith('configuration.')&&method!=='configuration.list'?result.value:null);
     const directIdentity=method==='status'||method.startsWith('login.');

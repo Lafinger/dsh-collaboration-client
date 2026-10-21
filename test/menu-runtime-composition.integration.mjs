@@ -20,7 +20,8 @@ test('official Loader and traced Remote services render project rows without abd
   const configuration={state:'configured',provider:'collaboration-remote',model:'server-agent',serviceId:'s',account:'alice'};
   ctx.provide('connection',{rpc:{call:async(_path,_endpoint,{method,payload})=>{calls.push(method);return{ok:true,value:{configuration,localId:payload.localId,scopeId:'scope',authenticated:true,mapped:false,busy:false,uncertain:false,projectId:null,provider:configuration.provider,model:configuration.model,...method==='project.menu'?{projects:[{id:'p',key:'P',name:'项目甲'}]}:{}}};}}});
   await ctx.plugin(Loader).await();ctx.loader.internal=modules;await modules.entries.start(ctx.loader,modules.manifest);await ctx.loader.await();
-  const sessionId='local',projection=createSnapshotStore({lastUsed:null,next:null}),sessionState=createSnapshotStore({blank:true}),scope=ctx.extend({});
+
+   const sessionId='local',projection=createSnapshotStore({lastUsed:null,next:null}),sessionState=createSnapshotStore({blank:true}),scope=ctx.extend({});
   const binding={key:sessionId,ctx:scope,hooks:{},keyedHooks:{},props:{sessionId},session:{projections:{faceOf:()=>projection},getSnapshot:sessionState.getSnapshot}},source=createSnapshotStore(binding);
   ctx.slots.installScope('session',{current:source,bindingSource:()=>source,renderArea:(current,props)=>typeof props.children==='function'?props.children(current):props.children});
   ctx.provide('sessions',{scope:()=>scope,binding:()=>binding,subagentAddress:()=>undefined});ctx.provide('commandUi',{register:()=>()=>{}});
@@ -37,7 +38,7 @@ test('official Loader and traced Remote services render project rows without abd
   const initialEntries=ctx.slots.entriesOfSlot('conversation.input.model');assert.equal(initialEntries.length,1);assert.equal(initialEntries[0].locale,'collaboration-model-menu');
   const click=async element=>{assert.ok(element);await act(async()=>element.dispatchEvent(new dom.window.MouseEvent('click',{bubbles:true})));};await click(dom.window.document.querySelector('button[aria-haspopup="menu"]'));await click([...dom.window.document.querySelectorAll('button')].find(button=>button.getAttribute('role')==='menuitem'&&button.textContent.startsWith('模型')));
   assert.ok([...dom.window.document.querySelectorAll('button')].some(button=>button.title==='P · 项目甲'));assert.ok(![...dom.window.document.querySelectorAll('button')].some(button=>button.textContent==='项目选择'));assert.deepEqual(errors,[]);assert.equal(calls.filter(method=>method==='project.menu').length,1);
-  await act(async()=>modules.entries.sync({rev:'unloaded',entries:[],batches:[]}));assert.equal(dom.window.document.querySelector('.dsh-collaboration-model'),null);assert.equal(ctx.slots.entriesOfSlot('conversation.input.model').length,1);
+  await act(async()=>modules.entries.sync({...graph,rev:'unloaded',entries:[],batches:[]}));assert.equal(dom.window.document.querySelector('.dsh-collaboration-model'),null);assert.equal(ctx.slots.entriesOfSlot('conversation.input.model').length,1);
   await act(async()=>modules.entries.sync(graph));assert.ok(dom.window.document.querySelector('.dsh-collaboration-model'));assert.deepEqual(errors,[]);
  }finally{if(root)await act(async()=>root.unmount());await ctx.fiber.dispose();dom.window.close();for(const[key,descriptor]of Object.entries(prior)){if(descriptor)Object.defineProperty(globalThis,key,descriptor);else delete globalThis[key];}}
 });

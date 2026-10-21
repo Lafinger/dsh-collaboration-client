@@ -19,10 +19,14 @@ export function createTestPrimitives(){
 }
 export function loadOfficialUi(name,{globals={},overrides={},sourcePath}={}){
  const root=dirname(require.resolve(name+'/package.json'));let registration;
+ const manifest=JSON.parse(readFileSync(resolve(root,'package.json'),'utf8'));
+ const declared=manifest.exports?.['./client'];
+ const browserEntry=typeof declared==='string'?declared:declared?.browser??declared?.default;
+ assert.equal(typeof browserEntry,'string','Official package must declare its browser client export');
  const window=globals.window??{},previousLoader=Object.getOwnPropertyDescriptor(window,'__ModuleLoader__');
  Object.defineProperty(window,'__ModuleLoader__',{value:{load:row=>{registration=row;}},writable:true,configurable:true});
  const context=vm.createContext({console,queueMicrotask,setTimeout,clearTimeout,AbortController,URL,Date,TextEncoder,TextDecoder,...globals,window});
- try{new vm.Script(readFileSync(sourcePath??resolve(root,'lib/client.js'),'utf8'),{filename:name+'/client.js'}).runInContext(context);}
+ try{new vm.Script(readFileSync(sourcePath??resolve(root,browserEntry),'utf8'),{filename:name+'/client.js'}).runInContext(context);}
  finally{if(previousLoader)Object.defineProperty(window,'__ModuleLoader__',previousLoader);else delete window.__ModuleLoader__;}
  assert.equal(registration.id,name);
  const result=registration.factory(spec=>{

@@ -10,7 +10,7 @@ test('logged project route overrides actual official selection cache, ordinary s
  let defaultsSaved=0;
  const f=await createMountedMemberHost({setupHost:async ctx=>{
   await ctx.plugin(SessionStore).await();await ctx.plugin(ProjectionRegistry).await();await ctx.plugin(AgentRegistry).await();
-  ctx.provide('typert',{lookups:{configure:()=>()=>{}},contexts:{configureHost:()=>()=>{}}});
+  ctx.provide('typert',{resources:{register:()=>()=>{}},lookups:{configure:()=>()=>{}},contexts:{configureHost:()=>()=>{}}});
   ctx.provide('agentDefaultModel',{currentSelection:()=>({provider:'ordinary',model:'old-model',reasoningEffort:'high'}),saveSelection:async()=>{defaultsSaved++;}});
   ctx.provide('fileUploads',{registerAgentResolver:()=>()=>{}});ctx.provide('attachments',{imageLimits:{maxImageBytes:100}});
   ctx.provide('sessionQuery',{observeSession:async()=>{throw Error('No cold resume');}});
@@ -31,7 +31,7 @@ test('logged project route overrides actual official selection cache, ordinary s
   assert.equal(defaultsSaved,1);defaultsSaved=0;
   const client=f.entry.client;client.login={expiresAt:Date.now()+3600000};client.projects=async()=>[{id:'p',key:'P',name:'Project'}];
   const shared=ctx.connection.createSharedFetchHandler('/api');
-  const call=async(method,payload)=>(await(await shared.fetch(new Request('http://127.0.0.1:19999/api/collaboration/member',{method:'POST',headers:{host:'127.0.0.1:19999','content-type':'application/json'},body:JSON.stringify({type:'client-request',rpcId:'x',method:'collaboration/member',payload:{method,payload}})}))).json()).result;
+  const call=async(method,payload)=>{const request=new Request('http://127.0.0.1:19999/api/collaboration/member',{method:'POST',headers:{host:'127.0.0.1:19999','content-type':'application/json'},body:JSON.stringify({type:'client-request',rpcId:'x',method:'collaboration/member',payload:{method,payload}})});const admission=ctx.connection.admit(request);assert.ok(!('rejection'in admission));return(await(await shared.fetch(request,admission.peer)).json()).result;};
   const menu=await call('project.menu',{localId:session.id});assert.equal(menu.ok,true);
   const selected=await call('project.activate',{localId:session.id,projectId:'p',scopeId:menu.value.scopeId});assert.equal(selected.ok,true);assert.equal(defaultsSaved,0);
   const events=agentEvents(ctx,agent),signal=new AbortController().signal;

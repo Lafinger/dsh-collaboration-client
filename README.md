@@ -80,15 +80,15 @@ DSH 插件管理器安装来源填写：
 github:Lafinger/dsh-collaboration-client
 ```
 
-正式固定来源为`github:Lafinger/dsh-collaboration-client#v0.5.3`，须等对应CI／Release成功后安装；历史`#v0.3.0`不包含本轮功能，不要把旧标签当作本次验收包。无版本入口读取默认分支，不自动选择最新Release。仅GitHub构建/发布，不发布npm或插件市场；自动测试、标签发布和Release下载见[发布说明](docs/RELEASE.md)，当前证据见[新版线上验收](docs/RENAME-RELEASE-VERIFY.md)，旧首版证据在[历史记录](docs/GITHUB-RELEASE-VERIFY.md)。
+本次预发布固定来源为`github:Lafinger/dsh-collaboration-client#v0.6.1-rc.1`，须等对应CI与GitHub预发布Release成功后安装。无版本入口读取默认分支，不自动选择最新Release；旧发行版和已交付测试包不覆盖。仅GitHub构建/发布，不发布npm或插件市场；见[发布说明](docs/RELEASE.md)、[本次真人验收](docs/CLIENT-UI-ACCEPTANCE-2026-10-21.md)及[预发布说明](docs/RELEASE-0.6.1-rc.1.md)。历史证据保留在[早期线上验收](docs/RENAME-RELEASE-VERIFY.md)与[首版记录](docs/GITHUB-RELEASE-VERIFY.md)。
 
 ## 首次配置
 
-安装0.5.3后组件默认启用，但启用不代表连接或认证。已有有效成员配置可自动读取；没有配置进入安全待配置，不建库、不注册远端模型、不发SSH。在设置中选择或导入管理员提供的成员连接JSON即可，不必手改原文件；[空模板](<examples/client-config.example.json>)仅供管理员参考，不猜真实参数。详细规则见[连接配置](<docs/INSTALL.md>)。
+安装后组件默认启用，但启用不代表已连接、已登录或已执行业务。当前最小接入在设置→协作服务确认HTTPS服务地址并使用钉钉网页扫码；已有有效设备登录不需要为升级而退出、清理或重新扫描。安装不创建项目或自动分配角色。旧成员JSON接入规则作为历史兼容能力保留，见[连接配置](<docs/INSTALL.md>)与[空模板](<examples/client-config.example.json>)，不要猜测生产参数。
 
 ## 开发与检查
 
-当前客户端 **0.5.3** 对应宿主 **DSH 0.2.0-rc.2**，Cordis `4.0.4`、Schemastery `3.18.4`。要求 Node >=24、pnpm，使用本项目 lockfile 安装；旧客户端 0.1.0 的 0.1.5 peer 声明会被当前安装器正确拒绝，不应使用版本豁免绕过。本轮对应服务端0.5.0（固定成功提交部署）、协作扩展协议v3（ACP-shaped基础版本1）和附件扩展1，严格拒绝旧v2及SSH-only业务回退。已发布0.3.0／服务端0.4.1的v2说明属于历史。图片支持传输归档不等于模型支持视觉分析。
+当前预发布客户端 **0.6.1-rc.1** 固定验证宿主 **DSH 0.2.1-rc.2**、Cordis `4.0.5`、Schemastery `3.18.5`。要求Node >=24，使用本项目lockfile；不以版本豁免绕过兼容门禁，也不承诺未验证的历史或未来宿主。旧客户端0.6.0及更早发行资产不变，不能把其旧宿主声明当作本次兼容结果。协作扩展协议v3（ACP-shaped基础版本1）与附件扩展1保持不变，拒绝旧v2及业务协议降级；本轮不更换服务端、不改既有项目/登录/对话归属。图片传输归档不等于模型支持视觉分析。
 
 ```sh
 pnpm install --frozen-lockfile --ignore-scripts
