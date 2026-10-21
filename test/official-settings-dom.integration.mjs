@@ -22,7 +22,8 @@ test('official Host→module→entry-start→settings shell renders the sidebar 
   const absent=createSnapshotStore({key:undefined,hooks:{},keyedHooks:{},props:{}});ctx.slots.installScope('session',{current:absent,bindingSource:()=>absent});
   const frame=ctx.plugin({inject:['slots'],apply(active){active.slots.register({name:'root',children:{'sidebar.settings':{kind:'single',scope:'root'}}},({renderSlot})=>renderSlot('sidebar.settings',{wide:true}));}});await frame.await();
   const {modules,graph}=await loadBrowserThroughDsh(process.env.DSH_COLLABORATION_PACKAGE_ROOT??fileURLToPath(new URL('..',import.meta.url)),{react:React});
-  const loaderFiber=ctx.plugin(Loader);await loaderFiber.await();ctx.loader.internal=modules;
+  ctx.provide('modules',modules);
+   const loaderFiber=ctx.plugin(Loader);await loaderFiber.await();ctx.loader.internal=modules;
   await modules.entries.start(ctx.loader,modules.manifest);await ctx.loader.await();assert.equal([...ctx.loader.entries()][0].fiber.state,2);
   const shellFiber=ctx.plugin(shell);await shellFiber.await();
   root=createRoot(dom.window.document.getElementById('app'));await act(async()=>{root.render(ctx.slots.renderSlot('root',{}));});
@@ -31,7 +32,7 @@ test('official Host→module→entry-start→settings shell renders the sidebar 
   await click('协作服务');const section=dom.window.document.querySelector('section[aria-label="协作服务"]');assert.ok(section);assert.ok(section.textContent.includes('服务连接'));assert.ok(section.textContent.includes('钉钉扫码登录'));assert.ok(!section.querySelector('[aria-label="当前会话项目"]'));assert.ok(!/绑定新会话项目|查看已保存历史|查看本人及公共项目通信/.test(section.textContent));
   assert.equal(Boolean(section.querySelector('[role="alert"]')),false,'Screenshot regression: local status must load through real official RPC');assert.ok(section.textContent.includes('钉钉扫码登录'),'MVP settings must render the PC login surface');assert.ok(section.querySelector('input[aria-label="HTTPS服务地址"]'));assert.equal(section.querySelector('input[type="file"]'),null);assert.equal(fixture.remoteCalls,0);
   assert.ok(calls.length>0);assert.ok(calls.every(method=>['status','configuration.list'].includes(method)));
-  await act(async()=>{await modules.entries.sync({rev:'empty',entries:[],batches:[]});});assert.equal(dom.window.document.querySelector('section[aria-label="协作服务"]'),null);assert.ok(![...dom.window.document.querySelectorAll('nav button')].some(b=>b.textContent.trim()==='协作服务'));
+  await act(async()=>{await modules.entries.sync({...graph,rev:'empty',entries:[],batches:[]});});assert.equal(dom.window.document.querySelector('section[aria-label="协作服务"]'),null);assert.ok(![...dom.window.document.querySelectorAll('nav button')].some(b=>b.textContent.trim()==='协作服务'));
   await act(async()=>{await modules.entries.sync(graph);});await click('协作服务');assert.ok(dom.window.document.querySelector('section[aria-label="协作服务"]'));assert.deepEqual(slotErrors,[]);
  }finally{
   if(root)await act(async()=>root.unmount());await ctx.fiber.dispose();await fixture?.close();dom.window.close();for(const[key,descriptor]of Object.entries(previous)){if(descriptor)Object.defineProperty(globalThis,key,descriptor);else delete globalThis[key];}
