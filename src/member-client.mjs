@@ -2,11 +2,13 @@ import { DatabaseSync } from 'node:sqlite';
 import { createHash,randomUUID,randomBytes } from 'node:crypto';
 import { AccessError, requireText, initializeParams, requireInitializeResult } from './protocol.mjs';
 import { attachmentCapability, requireAttachmentCapability } from './attachment-protocol.mjs';
+import { humanAuthorizationCapability, requireHumanAuthorizationCapability, validateHumanAuthorization } from './human-authorization.mjs';
+import { HumanSubmissionError } from './human-results.mjs';
 
 /** Per-client durable mapping; failure is fail-closed, never an optimization-only cache. */
 export class MemberClient {
   constructor({ connect, databasePath, serviceId, account, onHistory, attachments,requireLogin=false,loginOrigin }) {
-    this.attachments = attachments; this.attachmentCapability = null;
+    this.attachments = attachments; this.attachmentCapability = null; this.humanAuthorizationCapability = null; this.lastAttachmentRequests = new Map(); this.restoreContexts = new Map();
     this.connect = connect; this.serviceId = requireText(serviceId, 'serviceId', 200); this.account = requireText(account, 'account', 200);
     this.onHistory = onHistory; this.peer = null; this.connecting = null; this.attached = new Set(); this.listeners = new Map(); this.busy = new Set(); this.opening = new Map();
     this.requireLogin=requireLogin;this.loginOrigin=loginOrigin;this.login=null;this.pendingLogin=null;this.loginRequired=false;
@@ -37,7 +39,7 @@ export class MemberClient {
     if (this.connecting) return this.connecting;
     this.connecting = (async () => {
       const peer = await this.connect();
-      this.attachmentCapability = null;
+      this.attachmentCapability = null; this.humanAuthorizationCapability = null;
       try {
         if(!allowStale)this.assertCurrent();
         peer.on('message', m => {
@@ -52,9 +54,12 @@ export class MemberClient {
         });
         const params = initializeParams();Object.assign(params.clientCapabilities,this.initializeCapabilities?.()??{});
         if (this.attachments) params.clientCapabilities.attachmentTransfer = attachmentCapability();
+        params.clientCapabilities.humanAuthorization = humanAuthorizationCapability();
         const initialized = await peer.request('initialize', params);
         requireInitializeResult(initialized);this.validateInitialize?.(initialized);
         this.attachmentCapability = initialized.agentCapabilities?.attachmentTransfer ?? null;
+        this.humanAuthorizationCapability = initialized.agentCapabilities?.humanAuthorization ?? null;
+        if (this.humanAuthorizationCapability) requireHumanAuthorizationCapability(this.humanAuthorizationCapability);
         if (this.attachmentCapability) requireAttachmentCapability(this.attachmentCapability);
         this.loginRequired=this.requireLogin||initialized.authMethods?.some(m=>m.id==='dingtalk-device');
         if(this.requireLogin&&!initialized.authMethods?.some(m=>m.id==='dingtalk-device'))throw new AccessError(-32011,'Server does not provide required DingTalk authentication; no SSH-only fallback');
@@ -105,7 +110,7 @@ export class MemberClient {
     try{await this.ensureConnected();return this.authStatus();}catch{return {...this.authStatus(),authenticated:false,account:null,expiresAt:null};}
   }
   async logout(){
-    const login=this.login;let peer=this.peer;this.login=null;this.pendingLogin=null;this.attached.clear();this.attachments?.clear();clearTimeout(this.reconnectTimer);this.reconnectTimer=null;
+    const login=this.login;let peer=this.peer;this.login=null;this.pendingLogin=null;this.attached.clear();this.attachments?.clear();this.lastAttachmentRequests.clear();this.restoreContexts.clear();clearTimeout(this.reconnectTimer);this.reconnectTimer=null;
     try{if(login)peer=await this.ensureTransport({allowStale:true});if(peer&&!peer.closed)await peer.request('collaboration/login/logout',login?{token:login.token,deviceId:this.deviceId}:{});}
     catch{throw new AccessError(-32001,'本机已退出，服务器撤销尚未确认；请由管理员核对设备状态。');}
     finally{peer?.close();}
@@ -165,6 +170,39 @@ export class MemberClient {
     if(!owner||owner.service_id!==this.serviceId||owner.account!==this.account)return null;
     return this.db.prepare('SELECT project_id FROM client_project_selection WHERE local_id=?').get(localId)?.project_id??null;
   }
+  recordHumanContext(localId, { messageId, confirmation }) {
+    const previous = this.restoreContexts.get(localId);
+    if (previous?.messageId === messageId) return;
+    if (!confirmation) this.restoreContexts.set(localId, { messageId, allowed: false });
+    else if (previous) this.restoreContexts.set(localId, { ...previous, messageId });
+  }
+  expectRestoreConfirmation(localId, context) { this.restoreContexts.set(localId, { ...context, allowed: true }); }
+  projectAdmissionState(localId) {
+    this.assertCurrent();
+    const owner = this.db.prepare('SELECT service_id,account FROM client_project_owner WHERE local_id=?').get(localId);
+    if (owner && (owner.service_id !== this.serviceId || owner.account !== this.account)) throw new AccessError(-32003, '当前项目选择属于另一成员或服务，请新建会话。');
+    const mapped = this.mapping(localId);
+    return { owner: owner ? [owner.service_id, owner.account] : null, projectId: this.selectedProject(localId), mapped: mapped?.remote_id ?? null,
+      busy: this.busy.has(localId), opening: this.opening.has(localId), pending: !!this.pendingProjectSelection(localId) };
+  }
+  async attachmentReceipts(localId) {
+    const row = this.mapping(localId), projectId = this.selectedProject(localId);
+    if (!row || !projectId) return [];
+    const peer = await this.ensureConnected(); requireHumanAuthorizationCapability(this.humanAuthorizationCapability);
+    const result = await peer.request('collaboration/attachments/receipts', { sessionId: row.remote_id });
+    this.assertCurrent();
+    if (this.mapping(localId)?.remote_id !== row.remote_id || this.selectedProject(localId) !== projectId) throw new AccessError(-32013, '查询期间会话归属改变，未授权归档。');
+    if (!Array.isArray(result?.receipts)) throw new AccessError(-32011, '附件回执列表格式不兼容；未执行归档。');
+    return result.receipts.filter(receipt => receipt && typeof receipt.receiptId === 'string' && receipt.receiptId && typeof receipt.requestId === 'string' && receipt.requestId && typeof receipt.name === 'string' && receipt.projectId === projectId)
+      .map(receipt => {
+        const pending = receipt.pendingRestore;
+        const pendingRestore = pending && typeof pending.targetMaterialId === 'string' && pending.targetMaterialId && Number.isSafeInteger(pending.restoreVersion) && pending.restoreVersion > 0 && Number.isSafeInteger(pending.expectedLatestVersion) && pending.expectedLatestVersion > 0
+          ? { targetMaterialId: pending.targetMaterialId, restoreVersion: pending.restoreVersion, expectedLatestVersion: pending.expectedLatestVersion } : undefined;
+        return { receiptId: receipt.receiptId, name: receipt.name, projectId: receipt.projectId, requestId: receipt.requestId, archived: receipt.archived === true,
+          ...(typeof receipt.materialId === 'string' ? { materialId: receipt.materialId } : {}), ...(Number.isSafeInteger(receipt.version) && receipt.version > 0 ? { version: receipt.version } : {}),
+          ...(typeof receipt.archiveAuthorized === 'boolean' ? { archiveAuthorized: receipt.archiveAuthorized } : {}), ...(pendingRestore ? { pendingRestore } : {}) };
+      });
+  }
   async legacyHistory(localId){const row=this.mapping(localId);if(!row)throw new AccessError(-32004,'No saved conversation');return (await this.ensureConnected()).request('collaboration/history',{sessionId:row.remote_id,after:0});}
   wasSubmitted(localId, messageId) { return !!this.db.prepare('SELECT 1 FROM client_submissions WHERE local_id=? AND message_id=?').get(localId, messageId); }
   mapping(localId) {
@@ -210,28 +248,56 @@ export class MemberClient {
     const previous = this.db.prepare('SELECT state FROM client_submissions WHERE local_id=? AND message_id=?').get(localId, messageId);
     if (previous) throw new AccessError(-32005, 'This message was already submitted. Restore history; do not automatically retry.', { state: previous.state });
     this.busy.add(localId);
-    let row, peer, sent = false;
+    let row, peer, requestId, sent = false;
     try {
+      await this.ensureConnected();
+      if (attachmentEntry?.humanAuthorization || this.requireLogin || this.humanAuthorizationCapability) {
+        requireHumanAuthorizationCapability(this.humanAuthorizationCapability);
+        validateHumanAuthorization(attachmentEntry?.humanAuthorization, { messageId, text, projectId: this.selectedProject(localId), items: attachmentEntry?.items ?? [] });
+      }
       ({ row, peer } = await this.open(localId));this.assertCurrent();
       if (signal?.aborted) throw new AccessError(-32010, 'Cancelled before submission');
-      if (attachmentEntry) requireAttachmentCapability(this.attachmentCapability);
+      if (attachmentEntry?.items.length) requireAttachmentCapability(this.attachmentCapability);
+      if (attachmentEntry?.humanAuthorization || this.requireLogin || this.humanAuthorizationCapability) {
+        requireHumanAuthorizationCapability(this.humanAuthorizationCapability);
+        validateHumanAuthorization(attachmentEntry?.humanAuthorization, { messageId, text, projectId: this.selectedProject(localId), items: attachmentEntry?.items ?? [] });
+      }
       this.db.prepare('INSERT INTO client_submissions VALUES(?,?,?)').run(localId, messageId, 'running');
-      const requestId = createHash('sha256').update(`${this.serviceId}\0${this.account}\0${localId}\0${messageId}`).digest('hex');
+      requestId = createHash('sha256').update(`${this.serviceId}\0${this.account}\0${localId}\0${messageId}`).digest('hex');
       this.listeners.set(row.remote_id, notification => {
-        onUpdate?.(notification.update); this.advance(localId, notification._meta?.sequence);
+        // Operation authority exists only in the server publication's update meta.
+        // Outer notification meta is a history sequence, never operation evidence.
+        const publication = notification.update?._meta;
+        if (this.humanAuthorizationCapability?.version === 2 && publication?.requestId && publication.requestId !== requestId) return;
+        const trusted = this.humanAuthorizationCapability?.version === 2 && publication?.requestId === requestId && notification.update?.sessionUpdate === 'agent_message_chunk' && publication.operationResult;
+        if (publication?.operationResult && !trusted) return;
+        onUpdate?.(notification.update, trusted ? { requestId, operationResult: publication.operationResult } : undefined);
+        this.advance(localId, notification._meta?.sequence);
       });
       const abort = () => { if (!peer.closed) peer.notify('session/cancel', { sessionId: row.remote_id }); };
       signal?.addEventListener('abort', abort, { once: true });
-      const release = attachmentEntry ? this.attachments.bind(row.remote_id, requestId, attachmentEntry, signal) : () => {};
+      const release = attachmentEntry?.items.length ? this.attachments.bind(row.remote_id, requestId, attachmentEntry, signal) : () => {};
       sent = true;
+      if (attachmentEntry?.items.length) this.lastAttachmentRequests.set(localId, requestId);
+      const receiptGrants = attachmentEntry?.humanAuthorization?.receiptScopes ?? [];
+      if (receiptGrants.some(scope => scope.restoreVersion !== undefined)) this.restoreContexts.set(localId, { messageId, allowed: false });
+      else if (attachmentEntry?.items.some(item => item.manifest.archiveAuthorized)) this.expectRestoreConfirmation(localId, { messageId, sourceRequestId: requestId });
+      else if (receiptGrants.length) this.expectRestoreConfirmation(localId, { messageId, receiptIds: receiptGrants.map(scope => scope.receiptId) });
       try {
-        const meta = { requestId, ...(attachmentEntry ? { attachments: attachmentEntry.items.map(item => item.manifest) } : {}) };
+        const meta = { requestId, ...(attachmentEntry?.items.length ? { attachments: attachmentEntry.items.map(item => item.manifest) } : {}), ...(attachmentEntry?.humanAuthorization ? { humanAuthorization: attachmentEntry.humanAuthorization } : {}) };
         const result = await peer.request('session/prompt', { sessionId: row.remote_id, prompt: [{ type: 'text', text }], _meta: meta }, { timeoutMs: 0 });
         this.db.prepare('UPDATE client_submissions SET state=? WHERE local_id=? AND message_id=?').run(result.stopReason, localId, messageId);
         return result;
       } finally { release(); signal?.removeEventListener('abort', abort); }
     } catch (error) {
-      if (sent && !this.stopped) this.db.prepare("UPDATE client_submissions SET state='unknown' WHERE local_id=? AND message_id=?").run(localId, messageId);
+      if (sent) {
+        const matchingV2 = this.humanAuthorizationCapability?.version === 2 && error?.data?.requestId === requestId;
+        const notStarted = matchingV2 && error.data.executionState === 'not_started' && (!Array.isArray(error.data.operationResults) || error.data.operationResults.length === 0);
+        const outcome = notStarted ? 'not_started' : 'unknown';
+        if (notStarted) this.restoreContexts.set(localId, { messageId, allowed: false });
+        if (!this.stopped) this.db.prepare('UPDATE client_submissions SET state=? WHERE local_id=? AND message_id=?').run(outcome, localId, messageId);
+        if (this.humanAuthorizationCapability?.version === 2) throw new HumanSubmissionError(error, { outcome, operationResults: matchingV2 ? error.data.operationResults : [] });
+      }
       throw error;
     } finally { if (row) this.listeners.delete(row.remote_id); this.busy.delete(localId); }
   }

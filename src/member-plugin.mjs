@@ -5,6 +5,9 @@ import { openSsh } from './ssh.mjs';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { AttachmentAuthorization, explicitPaths } from './attachments.mjs';
+import { classifyHumanIntent, clarificationStream } from './human-intent.mjs';
+import { admitHumanTurn } from './human-admission.mjs';
+import { HumanSubmissionError, readableOperationResults } from './human-results.mjs';
 import { installMemberRpc } from './member-rpc.mjs';
 import { installProjectRouting } from './project-selection.mjs';
 import {HttpsConnection} from './https-connection.mjs';
@@ -46,18 +49,28 @@ export class MemberAdapter extends LlmAdapter {
     if (!attachmentEntry && (message.content.some(b => b.type !== 'text') || explicitPaths(plainText).length)) {
       yield finishError(new Error('Attachment authorization must be captured from the current human message by the installed plugin')); return;
     }
-    const queue = []; let wake, ended = false, failure, result;
+    const queue = [], publications = new Set(); let wake, ended = false, failure, result;
     const signal = () => { wake?.(); wake = null; };
     const task = client.prompt(String(options.sessionId), {
       messageId: String(message.id), text: attachmentEntry?.text || plainText, attachmentEntry, signal: options.signal,
-      onUpdate: update => { queue.push(update); signal(); },
+      onUpdate: (update, publication) => { queue.push({ update, publication }); signal(); },
     }).then(value => { result = value; }, error => { failure = error; }).finally(() => { ended = true; signal(); });
     let index = 0, open = null;
     const close = () => open ? { type: 'block-end', index: open.index, block: { type: open.kind, text: open.text } } : null;
     try {
       while (!ended || queue.length) {
         if (!queue.length) { await new Promise(resolve => { wake = resolve; }); continue; }
-        const update = queue.shift();
+        let { update, publication } = queue.shift();
+        if (publication?.operationResult) {
+          const operation = publication.operationResult;
+          const key = typeof operation.kind === 'string' && typeof operation.receipt_id === 'string' ? `${operation.kind}\0${operation.receipt_id}` : null;
+          if (key && publications.has(key)) continue;
+          if (key) publications.add(key);
+          const projected = readableOperationResults([operation]).join('\n');
+          const provided = update.content?.type === 'text' ? update.content.text : '';
+          const safeProvided = /[\u3400-\u9fff]/u.test(provided) && !/[a-f0-9]{32}|(?:receipt_id|material_id|project_id)|[A-Za-z]:\\/u.test(provided);
+          update = { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: projected || (safeProvided ? provided : '收到处理反馈，但尚未获得可核实的完成结果。') } };
+        }
         const kind = update.sessionUpdate === 'agent_message_chunk' ? 'text' : update.sessionUpdate === 'agent_thought_chunk' ? 'reasoning' : null;
         if (!kind || update.content?.type !== 'text') continue;
         if (open?.kind !== kind) { const end = close(); if (end) yield end; open = { kind, index: index++, text: '' }; yield { type: 'block-start', index: open.index, blockType: kind }; }
@@ -65,7 +78,12 @@ export class MemberAdapter extends LlmAdapter {
         yield { type: kind === 'text' ? 'text-delta' : 'reasoning-delta', index: open.index, text: update.content.text };
       }
       await task; const end = close(); if (end) yield end;
-      if (failure) yield finishError(failure);
+      if (failure instanceof HumanSubmissionError) {
+        // Sent failures remain host errors; readable facts never turn them into success.
+        const text = failure.message;
+        yield { type: 'block-start', index, blockType: 'text' }; yield { type: 'text-delta', index, text };
+        yield { type: 'block-end', index, block: { type: 'text', text } }; yield finishError(failure);
+      } else if (failure) yield finishError(failure);
       else if (result?.stopReason === 'cancelled') yield { type: 'finish', reason: { kind: 'aborted', failure: { code: 'CANCELLED', message: 'Remote turn cancelled; committed data remains' } } };
       else if (result?.stopReason === 'end_turn') yield { type: 'finish', reason: { kind: 'stop' } };
       else yield finishError(new Error(`Remote turn did not complete: ${result?.stopReason}`));
@@ -117,7 +135,30 @@ export function apply(ctx, input = {}) {
     // Capture is part of the turn, so a settings switch cannot race attachment admission.
     entry.operations++;
     try {
-      if (message && !client.wasSubmitted(String(options.sessionId), String(message.id))) await client.attachments.capture({ localId: String(options.sessionId), message, signal: options.signal });
+      if (message && !client.wasSubmitted(String(options.sessionId), String(message.id))) {
+        const text = message.content.filter(block => block.type === 'text').map(block => block.text).join('\n');
+        const selected = message.content.some(block => ['file', 'image'].includes(block.type)) || explicitPaths(text).length > 0;
+        const legacyFixture = ctx.get('collaborationLegacyTestConnection') && !client.requireLogin && !client.humanAuthorizationCapability;
+        if (selected && legacyFixture) {
+          const intent = classifyHumanIntent(text);
+          if (intent.kind === 'clarify') { yield* clarificationStream(intent.message); return; }
+        }
+        // Historical test connections retain the old exact-template contract only.
+        // Production QR clients always enter v2, including text-only turns.
+        if (legacyFixture) {
+          await client.attachments.capture({ localId: String(options.sessionId), message, signal: options.signal });
+        } else {
+          let admitted;
+          try {
+            admitted = await admitHumanTurn({ ctx, entry, client, options, message });
+            if (!admitted.clarification) await client.attachments.capture({ localId: String(options.sessionId), message, signal: options.signal, admission: admitted.admission });
+          } catch (error) {
+            const safe = typeof error.message === 'string' && /[\u3400-\u9fff]/u.test(error.message) && !/[a-f0-9]{32}|[A-Za-z]:\\|\/(?:home|srv|Users)\//u.test(error.message);
+            admitted = { clarification: safe ? error.message : '未能核实附件、成员或项目权限；本次没有发送业务请求，请核对后重新明确操作。' };
+          }
+          if (admitted.clarification) { yield* clarificationStream(admitted.clarification); return; }
+        }
+      }
       yield* next();
     } finally { if (message) client.attachments.take(String(options.sessionId), String(message.id)); entry.operations--; }
   });

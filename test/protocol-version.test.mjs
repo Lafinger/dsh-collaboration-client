@@ -6,7 +6,7 @@ import { initializeParams, requireInitializeResult, collaborationMeta } from '..
 
 test('client fails closed on old/missing/future/base protocol responses before identity or business calls',async()=>{
  for(const result of [{protocolVersion:1},{protocolVersion:1,_meta:{collaborationProtocolVersion:1}},{protocolVersion:1,_meta:{collaborationProtocolVersion:2}},{protocolVersion:1,_meta:{collaborationProtocolVersion:4}},{protocolVersion:2,_meta:collaborationMeta()}]){
-   const calls=[];const peer=new EventEmitter();peer.closed=false;peer.close=()=>{peer.closed=true;};peer.error=()=>{};peer.request=async(method,params)=>{calls.push(method);assert.deepEqual(params,initializeParams());return result;};
+   const calls=[];const peer=new EventEmitter();peer.closed=false;peer.close=()=>{peer.closed=true;};peer.error=()=>{};peer.request=async(method,params)=>{calls.push(method);assert.deepEqual(params,{...initializeParams(),clientCapabilities:{humanAuthorization:{version:2}}});return result;};
    const client=new MemberClient({connect:async()=>peer,databasePath:':memory:',serviceId:'fixture',account:'bob'});
    try{await assert.rejects(client.prompt('local',{messageId:'one',text:'not sent'}),error=>error.code===-32011);assert.deepEqual(calls,['initialize']);assert.equal(peer.closed,true);assert.equal(client.mapping('local'),undefined);assert.equal(client.db.prepare('SELECT count(*) n FROM client_submissions').get().n,0);}finally{client.close();}
  }
