@@ -32,19 +32,19 @@ github:Lafinger/dsh-collaboration-client
 这会安装默认分支代码，不自动选择最新 Release。正式使用建议固定版本：
 
 ```text
-github:Lafinger/dsh-collaboration-client#v0.3.0
+github:Lafinger/dsh-collaboration-client#v0.6.2-rc.1
 ```
 
 隔离 CLI 验证示意：
 
 ```sh
 dsh plugin --profile collaboration-compat-github add github:Lafinger/dsh-collaboration-client --ignore-scripts
-dsh plugin --profile collaboration-compat-github-tag add github:Lafinger/dsh-collaboration-client#v0.3.0 --ignore-scripts
+dsh plugin --profile collaboration-compat-github-tag add github:Lafinger/dsh-collaboration-client#v0.6.2-rc.1 --ignore-scripts
 ```
 
 还可在[Releases](https://github.com/Lafinger/dsh-collaboration-client/releases)下载 `.tgz`，核对 SHA256SUMS 后安装。main移到新提交不改变已固定的tag；版本tag/附件不得移动或覆盖。
 
-安装后默认禁用。启用空配置仅是安全待配置，不表示业务连通。真实账号/SSH/key/known_hosts按[连接配置](INSTALL.md)填写；GUI、真实SSH和模型验收不是CI自动发布的结论。
+安装／启用不表示已连接、已登录或已执行业务。当前MVP从协作服务设置可信HTTPS地址并由本人官方钉钉扫码；已有有效设备登录不为升级而退出或清理。见[本版配套范围与验收边界](RELEASE-0.6.2-rc.1.md)和[连接配置](INSTALL.md)；旧SSH接入说明仅为历史兼容，GUI、真实模型和业务验收不是CI自动发布的结论。
 
 ## 首次/后续发布
 
@@ -52,15 +52,15 @@ dsh plugin --profile collaboration-compat-github-tag add github:Lafinger/dsh-col
 
 1. 在[包配置](../package.json)升版，保持支持的DSH精确版本。
 2. 更新必要文档；使用pnpm更新lockfile并执行check、pack/pack:check。
-3. 提交并push main，等待对应CI成功。
+3. 在唯一分支提交并创建PR，等待Ubuntu／Windows／Package三个required checks通过后普通合并，不admin bypass；再等待准确main提交的CI成功。
 4. 创建带注释的版本tag，push tag：
 
 ```sh
-git tag -a v0.2.2 -m "Release v0.2.2"
-git push origin v0.2.2
+git tag -a v0.6.2-rc.1 -m "Release v0.6.2-rc.1"
+git push origin v0.6.2-rc.1
 ```
 
-这里0.2.2仅是下次示例，必须和package.version相同。不能只改标签不升包版本。带rc/beta等版本自动标prerelease，普通版本设为latest。
+这里0.6.2-rc.1是本版示例，必须和package.version相同；若该tag已发布，后续须另升未用版本，不能重打或覆盖。不能只改标签不升包版本。带rc/beta等版本自动标prerelease，普通版本设为latest。
 
 5. 检查GitHub Actions结果和Release附件，再在独立环境安装固定tag。
 
@@ -79,7 +79,7 @@ pnpm run check
 pnpm pack --out .dsh/dsh-collaboration-client.tgz
 node scripts/check-package.mjs .dsh/dsh-collaboration-client.tgz
 pnpm run install:check github:Lafinger/dsh-collaboration-client
-pnpm run install:check github:Lafinger/dsh-collaboration-client#v0.3.0
+pnpm run install:check github:Lafinger/dsh-collaboration-client#v0.6.2-rc.1
 ```
 
 GitHub来源验证需要网络，单独运行，不让普通离线check依赖远端状态。真正DSH安装验证只用专用profile，不写desktop/acp。联合服务端验收仍独立，CI不依赖兄弟仓库。
