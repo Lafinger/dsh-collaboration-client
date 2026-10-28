@@ -39,8 +39,41 @@ for (const [text, kind] of [
   ['请不要把这份文件作为《requirements.md》的新版本归档', 'clarify'],
   ['请解释“请把这份文件作为《requirements.md》的新版本归档”这句话', 'clarify'],
   ['> 请把这份文件作为《requirements.md》的新版本归档', 'clarify'],
+  // 存档/存为资料 mean the same operation as 归档; 上传 is only a transfer, and 成果 is never an attachment action.
+  ['存档这份文件', 'archive'],
+  ['请把这份文件存为项目资料', 'archive'],
+  ['请把这份文件存档到当前项目资料库', 'archive'],
+  ['请勿存档这份附件。', 'clarify'],
+  ['不要存档，只看看', 'read'],
+  ['请解释“存档这份文件”的意思', 'clarify'],
+  ['提交成果', 'clarify'],
+  ['上传这份文件', 'clarify'],
 ]) test(`classify current-human intent: ${text.split('\n')[0]}`, () => {
   assert.equal(classifyHumanIntent(text).kind, kind);
+});
+
+test('归档、存档、上传、成果 are four different words and never interchangeable', () => {
+  // 归档 and 存档 both mean registering the original as a project material version.
+  assert.equal(classifyHumanIntent('归档这份文件').kind, 'archive');
+  assert.equal(classifyHumanIntent('存档这份文件').kind, 'archive');
+  // 上传 alone authorizes nothing: the member still has to say read or archive.
+  const upload = classifyHumanIntent('上传这份文件');
+  assert.equal(upload.kind, 'clarify');
+  assert.match(upload.message, /阅读|归档/u);
+  // 成果提交 is a business write, not an attachment action: it is never read as 归档.
+  const result = classifyHumanIntent('提交成果');
+  assert.equal(result.kind, 'clarify');
+  assert.equal(result.reason, 'missing-intent');
+});
+
+test('a refusal or a question tells the member the sentence that would work', () => {
+  const refused = classifyHumanIntent('不要把这份文件归档，也不要上传');
+  assert.equal(refused.kind, 'clarify');
+  assert.match(refused.message, /请单独发一句：帮我看看这份文件/u);
+  const asked = classifyHumanIntent('文档提到了归档，但我没有授权。');
+  assert.equal(asked.kind, 'clarify');
+  assert.match(asked.message, /要阅读请发：帮我看看这份文件/u);
+  assert.match(asked.message, /要归档请发：归档这份文件/u);
 });
 
 test('unknown or conflicting project is never replaced with current project', () => {
