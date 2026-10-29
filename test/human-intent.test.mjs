@@ -83,6 +83,25 @@ test('unknown or conflicting project is never replaced with current project', ()
   assert.equal(resolveHumanProject({ ...options('请归档到另一期项目'), projects: [project, other] }).kind, 'clarify');
 });
 
+test('a generic word for this project resolves to the bound project instead of clarifying', () => {
+  // A session that already selected its project must not be asked again merely because the
+  // human wrote "整个项目" / "本项目" / "这个项目". Those are references, not new names.
+  for (const text of [
+    '这是整个项目的需求文档，你需要分析并上传。',
+    '这是本项目的需求文档，你需要分析并上传。',
+    '这是这个项目的需求文档，你需要分析并上传。',
+    '这是该项目的需求文档，你需要分析并上传。',
+    '这是此项目的需求文档，你需要分析并上传。',
+    '这是当前项目的需求文档，你需要分析并上传。',
+    '这是本次项目的需求文档，你需要分析并上传。',
+    '这是项目的需求文档，你需要分析并上传。'
+  ]) {
+    const result = resolveHumanProject(options(text));
+    assert.equal(result.kind, 'resolved', 'expected resolution for: ' + text);
+    assert.equal(result.projectId, project.id);
+  }
+});
+
 test('known current project handles an ordinary generic project-repository destination', () => {
   const result = interpretAttachmentRequest(options('请归档到当前项目资料库'));
   assert.equal(result.kind, 'archive');
