@@ -27,8 +27,10 @@ test('GitHub workflow separates unprivileged build from tag-only contents-write 
   assert.match(source, /ubuntu-latest, windows-latest/);
   assert.match(source, /--frozen-lockfile --ignore-scripts/);
   assert.match(source,/pnpm run build[\s\S]*pnpm pack --out/,'Package job must build its own checkout before packing');
-  assert.match(source, /needs: package/);
+  assert.match(source, /needs: \[package, github-install\]/);
   assert.match(source, /startsWith\(github.ref, 'refs\/tags\/v'\)/);
+  assert.match(source, /pnpm run install:check "github:\$\{\{ github\.repository \}\}#\$\{\{ github\.ref_name \}\}"/,
+    'The tag job must install the released tag the same way a member does');
   assert.match(source, /contents: read/); assert.match(source, /contents: write/);
   assert.ok(!/npm publish|pnpm publish|NPM_TOKEN|id-token: write|pull_request_target/.test(source));
   assert.equal(metadata.private, true);

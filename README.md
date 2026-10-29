@@ -100,7 +100,15 @@ DSH 插件管理器安装来源填写：
 github:Lafinger/dsh-collaboration-client
 ```
 
-本次预发布固定来源为`github:Lafinger/dsh-collaboration-client#v0.6.1-rc.1`，须等对应CI与GitHub预发布Release成功后安装。无版本入口读取默认分支，不自动选择最新Release；旧发行版和已交付测试包不覆盖。仅GitHub构建/发布，不发布npm或插件市场；见[发布说明](docs/RELEASE.md)、[本次真人验收](docs/CLIENT-UI-ACCEPTANCE-2026-10-21.md)及[预发布说明](docs/RELEASE-0.6.1-rc.1.md)。历史证据保留在[早期线上验收](docs/RENAME-RELEASE-VERIFY.md)与[首版记录](docs/GITHUB-RELEASE-VERIFY.md)。
+DSH 插件管理器安装来源统一填固定版本，把版本号换成要装的发行版：
+
+```text
+github:Lafinger/dsh-collaboration-client#v0.6.3-rc.5
+```
+
+不带版本的入口 `github:Lafinger/dsh-collaboration-client` 读取默认分支，不自动选择最新 Release。安装器只接受包名、git 仓库地址或 tarball 地址；填 `…/releases/tag/…` 这类网页地址会被拒绝（`a URL must point at a git repository or a tarball`），Release 页面仅用于查阅附件与说明。
+
+本版为预发布 `v0.6.3-rc.5`，须等对应 CI 与 GitHub 预发布 Release 成功后安装；旧发行版和已交付测试包不覆盖。仅 GitHub 构建/发布，不发布 npm 或插件市场；见[发布说明](docs/RELEASE.md)、[本版说明](docs/RELEASE-0.6.3-rc.5.md)及[本次真人验收](docs/CLIENT-UI-ACCEPTANCE-2026-10-21.md)。历史证据保留在[早期线上验收](docs/RENAME-RELEASE-VERIFY.md)与[首版记录](docs/GITHUB-RELEASE-VERIFY.md)。
 
 ## 首次配置
 
