@@ -5,7 +5,6 @@ import { openSsh } from './ssh.mjs';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { AttachmentAuthorization, explicitPaths } from './attachments.mjs';
-import { classifyHumanIntent, clarificationStream } from './human-intent.mjs';
 import { admitHumanTurn } from './human-admission.mjs';
 import { HumanSubmissionError, readableOperationResults } from './human-results.mjs';
 import { installMemberRpc } from './member-rpc.mjs';
@@ -131,32 +130,22 @@ export function apply(ctx, input = {}) {
     const client = entry.client;
     if (!client || options.provider !== adapter.provider || options.model !== adapter.model || options.purpose !== undefined || !options.sessionId) { yield* next(); return; }
     if(!entry.currentValid()){yield {type:'finish',reason:{kind:'error',failure:{code:'COLLABORATION_NO_REPLAY',message:'活动成员配置已丢失或改变，请先退出并重新选择'}}};return;}
+    const finishStreamError = error => ({ type: 'finish', reason: { kind: 'error', failure: { code: 'COLLABORATION_NO_REPLAY', message: error.message } } });
     const message = [...options.messages].reverse().find(m => m.role === 'user' && m.source?.kind === 'user');
     // Capture is part of the turn, so a settings switch cannot race attachment admission.
     entry.operations++;
     try {
       if (message && !client.wasSubmitted(String(options.sessionId), String(message.id))) {
-        const text = message.content.filter(block => block.type === 'text').map(block => block.text).join('\n');
-        const selected = message.content.some(block => ['file', 'image'].includes(block.type)) || explicitPaths(text).length > 0;
-        const legacyFixture = ctx.get('collaborationLegacyTestConnection') && !client.requireLogin && !client.humanAuthorizationCapability;
-        if (selected && legacyFixture) {
-          const intent = classifyHumanIntent(text);
-          if (intent.kind === 'clarify') { yield* clarificationStream(intent.message); return; }
-        }
-        // Historical test connections retain the old exact-template contract only.
-        // Production QR clients always enter v2, including text-only turns.
-        if (legacyFixture) {
-          await client.attachments.capture({ localId: String(options.sessionId), message, signal: options.signal });
-        } else {
-          let admitted;
-          try {
-            admitted = await admitHumanTurn({ ctx, entry, client, options, message });
-            if (!admitted.clarification) await client.attachments.capture({ localId: String(options.sessionId), message, signal: options.signal, admission: admitted.admission });
-          } catch (error) {
-            const safe = typeof error.message === 'string' && /[\u3400-\u9fff]/u.test(error.message) && !/[a-f0-9]{32}|[A-Za-z]:\\|\/(?:home|srv|Users)\//u.test(error.message);
-            admitted = { clarification: safe ? error.message : '未能核实附件、成员或项目权限；本次没有发送业务请求，请核对后重新明确操作。' };
-          }
-          if (admitted.clarification) { yield* clarificationStream(admitted.clarification); return; }
+        // Every turn forwards raw text plus attachment manifests plus the bound project;
+        // the remote model clarifies anything ambiguous, no canned local strings.
+        try {
+          const admitted = await admitHumanTurn({ client, options, message });
+          await client.attachments.capture({ localId: String(options.sessionId), message, signal: options.signal, admission: admitted.admission });
+        } catch (error) {
+          // Capture is fail-closed: an unverified attachment problem never becomes a business request.
+          const safe = typeof error.message === 'string' && /[\u3400-\u9fff]/u.test(error.message) && !/[a-f0-9]{32}|[A-Za-z]:\\|\/(?:home|srv|Users)\//u.test(error.message);
+          yield finishStreamError(new Error(safe ? error.message : '未能核实附件、成员或项目权限；本次没有发送业务请求，请核对后重新明确操作。'));
+          return;
         }
       }
       yield* next();

@@ -32,14 +32,14 @@ github:Lafinger/dsh-collaboration-client
 这会安装默认分支代码，不自动选择最新 Release。安装统一使用固定版本：
 
 ```text
-github:Lafinger/dsh-collaboration-client#v0.6.3-rc.5
+github:Lafinger/dsh-collaboration-client#v0.6.3-rc.6
 ```
 
 隔离 CLI 验证示意：
 
 ```sh
 dsh plugin --profile collaboration-compat-github add github:Lafinger/dsh-collaboration-client --ignore-scripts
-dsh plugin --profile collaboration-compat-github-tag add github:Lafinger/dsh-collaboration-client#v0.6.3-rc.5 --ignore-scripts
+dsh plugin --profile collaboration-compat-github-tag add github:Lafinger/dsh-collaboration-client#v0.6.3-rc.6 --ignore-scripts
 ```
 
 还可在[Releases](https://github.com/Lafinger/dsh-collaboration-client/releases)下载 `.tgz`，核对 SHA256SUMS 后安装。main移到新提交不改变已固定的tag；版本tag/附件不得移动或覆盖。
@@ -56,11 +56,11 @@ dsh plugin --profile collaboration-compat-github-tag add github:Lafinger/dsh-col
 4. 创建带注释的版本tag，push tag：
 
 ```sh
-git tag -a v0.6.3-rc.5 -m "Release v0.6.3-rc.5"
-git push origin v0.6.3-rc.5
+git tag -a v0.6.3-rc.6 -m "Release v0.6.3-rc.6"
+git push origin v0.6.3-rc.6
 ```
 
-这里0.6.3-rc.5是本版示例，必须和package.version相同；若该tag已发布，后续须另升未用版本，不能重打或覆盖。不能只改标签不升包版本。带rc/beta等版本自动标prerelease，普通版本设为latest。
+这里0.6.3-rc.6是本版示例，必须和package.version相同；若该tag已发布，后续须另升未用版本，不能重打或覆盖。不能只改标签不升包版本。带rc/beta等版本自动标prerelease，普通版本设为latest。
 
 5. 检查GitHub Actions结果和Release附件。标签CI里的 `install:check` 已按成员方式安装该标签并挂载成功，发布前即确认可安装；发布后再在独立环境按同一固定tag复核一次。
 
@@ -79,7 +79,7 @@ pnpm run check
 pnpm pack --out .dsh/dsh-collaboration-client.tgz
 node scripts/check-package.mjs .dsh/dsh-collaboration-client.tgz
 pnpm run install:check github:Lafinger/dsh-collaboration-client
-pnpm run install:check github:Lafinger/dsh-collaboration-client#v0.6.3-rc.5
+pnpm run install:check github:Lafinger/dsh-collaboration-client#v0.6.3-rc.6
 ```
 
 GitHub来源验证需要网络，单独运行，不让普通离线check依赖远端状态；CI只在推送 v* 标签时执行它，并把结果作为发布 GitHub Release 的前置条件，因此"可安装"在发布前就有证据，而不是发布后才发现。

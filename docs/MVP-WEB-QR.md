@@ -32,4 +32,4 @@
 - 代码先提交推送GitHub，固定Windows／Ubuntu CI及原始打包一致性通过，才能向服务器同步或提供正式安装源。临时认证验证不改当前PC业务／模型门禁，不新建公网入口。
 - 真实A默认浏览器＋普通网络手机＋本人授权＋原DSH自动领取通过后，才保留数据正式切换，再先A后B分别验收，最后继续最小项目业务演练。助手不代确认，不重复未知业务操作。
 
-本仓保留原PC与SSH代码仅用于历史回归，并非新默认生产回退；[认证边界ADR](<adr/0003-browser-qr-login-preserves-device-boundaries.md>)与[协议增量](<PROTOCOL-v3.json>)为准。现用GUI是否已安装、真实手机链路是否通过、服务器运行SHA需分别核对，不能从源码或包版本号推定。
+本仓保留原PC与SSH代码仅用于历史回归，并非新默认生产回退；[认证边界ADR](<adr/0003-browser-qr-login-preserves-device-boundaries.md>)与[协议增量](<PROTOCOL-v4.json>)为准。现用GUI是否已安装、真实手机链路是否通过、服务器运行SHA需分别核对，不能从源码或包版本号推定。

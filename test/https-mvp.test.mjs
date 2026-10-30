@@ -12,7 +12,7 @@ const fakeCrypt=(action,input)=>action==='protect'?Buffer.from('encrypted:'+inpu
 test('single service address rejects bare IP HTTP, credentials or callback paths; verifies exact remote origin and MVP version',async()=>{
  assert.equal(trustedOrigin('https://mvp.example/'),'https://mvp.example');
  for(const value of ['http://mvp.example','https://u:p@mvp.example','https://mvp.example/callback','https://mvp.example/#token'])assert.throws(()=>trustedOrigin(value));
- const info={serviceId:'one',origin:'https://mvp.example',mvpHttpsVersion:2,protocolVersion:3,loginMethod:'dingtalk-qr'};
+ const info={serviceId:'one',origin:'https://mvp.example',mvpHttpsVersion:2,protocolVersion:4,loginMethod:'dingtalk-qr'};
  assert.deepEqual(await readServiceInfo(info.origin,{fetchImpl:async()=>Response.json(info)}),info);
  await assert.rejects(readServiceInfo(info.origin,{fetchImpl:async()=>Response.json({...info,origin:'https://other.example'})}));
 });
@@ -28,7 +28,7 @@ test('Windows CurrentUser DPAPI roundtrip works using synthetic input and never 
 class Peer extends EventEmitter{
  constructor(){super();this.closed=false;this.login=null;this.pending=false;this.confirmed=false;this.requests=[];}
  async request(method,p){this.requests.push(method);
-  if(method==='initialize')return {protocolVersion:1,_meta:{collaborationProtocolVersion:3},authMethods:[{id:'dingtalk-device'}],serviceId:'one',agentCapabilities:{mvpHttps:true}};
+  if(method==='initialize')return {protocolVersion:1,_meta:{collaborationProtocolVersion:4},authMethods:[{id:'dingtalk-device'}],serviceId:'one',agentCapabilities:{mvpHttps:true}};
   if(method==='collaboration/login/start'){this.pending=true;return {requestId:'request',loginUrl:'https://mvp.example/collaboration/pc-login#'+'a'.repeat(43),openUrl:'dingtalk://dingtalkclient/action/openapp?corpid=ding-test&container_type=work_platform&app_id=0_123&redirect_type=jump&redirect_url='+encodeURIComponent('https://mvp.example/collaboration/pc-login#'+'a'.repeat(43)),pairingCode:'A'.repeat(16),expiresAt:Date.now()+300000};}
   if(method==='collaboration/login/claim'){if(!this.confirmed)return {status:'pending'};this.login={status:'authenticated',token:'a'.repeat(43),account:'official-member',name:'Official name',administrator:false,serviceId:'one',deviceId:p.deviceId,expiresAt:Date.now()+604800000};return this.login;}
   if(method==='collaboration/login/authenticate')return {authenticated:true,...this.login};

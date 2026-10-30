@@ -11,7 +11,7 @@ function fixture(t,{loginOrigin='https://login.example.test',serverLogin=true}={
   const connect=async()=>new class extends EventEmitter{
     closed=false;
     async request(method,p){calls.push({method,p});
-      if(method==='initialize')return {protocolVersion:1,_meta:collaborationMeta(),agentCapabilities:{humanAuthorization:{version:2}},authMethods:serverLogin?[{id:'dingtalk-device'}]:[]};
+      if(method==='initialize')return {protocolVersion:1,_meta:collaborationMeta(),agentCapabilities:{humanAuthorization:{version:3}},authMethods:serverLogin?[{id:'dingtalk-device'}]:[]};
       if(method==='collaboration/login/start')return {requestId:'request',loginUrl:'https://login.example.test/collaboration/login/11111111-1111-1111-1111-111111111111',expiresAt:Date.now()+300000};
       if(method==='collaboration/login/claim')return {status:'authenticated',token:'private-device-token',account:'alice',serviceId:'s',deviceId:p.deviceId,expiresAt:Date.now()+43200000};
       if(method==='collaboration/login/authenticate'){if(revoke)throw new AccessError(-32003,'revoked');authorized=true;return {authenticated:true};}

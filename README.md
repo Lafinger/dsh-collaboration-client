@@ -80,14 +80,14 @@ v0.5.3已正式GitHub发布并通过main／tag双平台CI及公开包抽取回�
 
 ## 钉钉设备登录与协作v3
 
-当前工作区包含设置中的钉钉身份登录、当前会话项目选择与保留的兼容只读API（设置不提供历史／通信业务入口），使用[协议v3](<docs/PROTOCOL-v3.json>)，只允许同账号设备登录后的项目业务；SSH不再单独授予业务权限。token仅驻客户端Host内存。**已有v0.3.0标签不包含这些功能**，客户端使用0.5.3并配合支持v3的服务端；不以旧标签验收新版，也不代装现用GUI。当前用法见[扫码登录指南](<docs/DINGTALK-LOGIN.md>)。旧版发行、安装和验收结论保留历史，不代表真实钉钉通过。
+当前工作区包含设置中的钉钉身份登录、当前会话项目选择与保留的兼容只读API（设置不提供历史／通信业务入口），使用[协议v4](<docs/PROTOCOL-v4.json>)，只允许同账号设备登录后的项目业务；SSH不再单独授予业务权限。token仅驻客户端Host内存。**已有v0.3.0标签不包含这些功能**，本版客户端须与提供协作v4的服务端同批安装；不以旧标签验收新版，也不代装现用GUI。当前用法见[扫码登录指南](<docs/DINGTALK-LOGIN.md>)。旧版发行、安装和验收结论保留历史，不代表真实钉钉通过。
 
 ## 目录
 
 - [src/member-plugin.mjs](src/member-plugin.mjs)：Cordis 插件入口、LLM adapter、恢复 notice。
 - [src/member-client.mjs](src/member-client.mjs)：持久映射、稳定消息提交标识、自动恢复。
 - [src/ssh.mjs](src/ssh.mjs)：固定 SSH 命令、严格服务器指纹校验、密钥登录。
-- [配置与安装](docs/INSTALL.md)、[恢复行为](docs/RECOVERY.md)、[当前通信契约](<docs/PROTOCOL-v3.json>)、[验证记录](docs/VERIFY.md)。
+- [配置与安装](docs/INSTALL.md)、[恢复行为](docs/RECOVERY.md)、[当前通信契约](<docs/PROTOCOL-v4.json>)、[验证记录](docs/VERIFY.md)。
 - [术语](GLOSSARY.md)、[来源](PROVENANCE.json)。
 
 客户端不含服务端签名密钥、账号认证权威或业务库。只有自身会话映射使用的 SQLite，不与服务器业务库混用。保留本地 DSH loop，但不调用本地业务模型；转发最新有稳定 ID 的 user-source 指令。附件0.3.0新增当前消息明确授权文件的工具分块传输，不开放任意本地文件访问，见[附件用法与边界](<docs/ATTACHMENTS.md>)。
@@ -103,12 +103,12 @@ github:Lafinger/dsh-collaboration-client
 DSH 插件管理器安装来源统一填固定版本，把版本号换成要装的发行版：
 
 ```text
-github:Lafinger/dsh-collaboration-client#v0.6.3-rc.5
+github:Lafinger/dsh-collaboration-client#v0.6.3-rc.6
 ```
 
 不带版本的入口 `github:Lafinger/dsh-collaboration-client` 读取默认分支，不自动选择最新 Release。安装器只接受包名、git 仓库地址或 tarball 地址；填 `…/releases/tag/…` 这类网页地址会被拒绝（`a URL must point at a git repository or a tarball`），Release 页面仅用于查阅附件与说明。
 
-本版为预发布 `v0.6.3-rc.5`，须等对应 CI 与 GitHub 预发布 Release 成功后安装；旧发行版和已交付测试包不覆盖。仅 GitHub 构建/发布，不发布 npm 或插件市场；见[发布说明](docs/RELEASE.md)、[本版说明](docs/RELEASE-0.6.3-rc.5.md)及[本次真人验收](docs/CLIENT-UI-ACCEPTANCE-2026-10-21.md)。历史证据保留在[早期线上验收](docs/RENAME-RELEASE-VERIFY.md)与[首版记录](docs/GITHUB-RELEASE-VERIFY.md)。
+本版为预发布 `v0.6.3-rc.6`，须等对应 CI 与 GitHub 预发布 Release 成功后安装；旧发行版和已交付测试包不覆盖。仅 GitHub 构建/发布，不发布 npm 或插件市场；见[发布说明](docs/RELEASE.md)、[本版说明](docs/RELEASE-0.6.3-rc.6.md)及[本次真人验收](docs/CLIENT-UI-ACCEPTANCE-2026-10-21.md)。历史证据保留在[早期线上验收](docs/RENAME-RELEASE-VERIFY.md)与[首版记录](docs/GITHUB-RELEASE-VERIFY.md)。
 
 ## 首次配置
 
@@ -128,7 +128,7 @@ github:Lafinger/dsh-collaboration-client#v0.6.3-rc.5
 
 ## 开发与检查
 
-当前预发布客户端 **0.6.2-rc.1** 固定验证宿主 **DSH 0.2.1-rc.2**、Cordis `4.0.5`、Schemastery `3.18.5`。要求Node >=24，使用本项目lockfile；不以版本豁免绕过兼容门禁，也不承诺未验证的历史或未来宿主。旧客户端0.6.0及更早发行资产不变，不能把其旧宿主声明当作本次兼容结果。协作扩展协议v3（ACP-shaped基础版本1）与附件扩展1保持不变，拒绝旧v2及业务协议降级；本轮不更换服务端、不改既有项目/登录/对话归属。图片传输归档不等于模型支持视觉分析。
+当前预发布客户端 **0.6.3-rc.6** 固定验证宿主 **DSH 0.2.1-rc.2**、Cordis `4.0.5`、Schemastery `3.18.5`。要求Node >=24，使用本项目lockfile；不以版本豁免绕过兼容门禁，也不承诺未验证的历史或未来宿主。旧客户端0.6.0及更早发行资产不变，不能把其旧宿主声明当作本次兼容结果。协作扩展协议v4（ACP-shaped基础版本1）与附件扩展2硬配对，拒绝旧协作v3及业务协议降级，须与服务端 v0.7.2-rc.7 同批发布；本轮不改既有项目/登录/对话归属。附件上传即授权、按会话持续有效；图片视觉读取不等于正式业务结论。
 
 ```sh
 pnpm install --frozen-lockfile --ignore-scripts
