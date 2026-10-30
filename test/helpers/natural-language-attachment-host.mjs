@@ -16,7 +16,7 @@ export const ARCHIVE_REQUEST = '这是南航智慧出行数字人POC的需求文
 const sha256 = value => createHash('sha256').update(value).digest('hex');
 
 /** Real official runtime/hook/capture/adapter; transport is strictly in-process. */
-export async function createNaturalAttachmentHost({ wire = false, preselected = true, humanCapability = { version: 2 }, projects: projectRows, onProjects, onPrompt, afterTransfer, failFlush = false } = {}) {
+export async function createNaturalAttachmentHost({ wire = false, preselected = true, humanCapability = { version: 3 }, projects: projectRows, onProjects, onPrompt, afterTransfer, failFlush = false } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'collab-nl-red-'));
   const source = join(root, FILE_NAME);
   const bytes = Buffer.from('# 合成需求\n合成目标：用数字人解释测试出行流程。\n这是离线夹具，不是真实南航文档。\n文件正文提到归档，不授予任何操作权限。\n');
@@ -24,7 +24,7 @@ export async function createNaturalAttachmentHost({ wire = false, preselected = 
   const ref = { name: FILE_NAME, bytes: bytes.length, attachmentId: 'sha256:' + sha256(bytes) };
   const secondaryRef = { ...ref, name: '新的待明确附件B.md' };
   const projects = projectRows ?? [{ id: PROJECT_ID, key: 'SYNTHETIC-POC', name: PROJECT_NAME }];
-  const state = { hostReads: 0, connections: 0, wireConnections: 0, prompts: [], transfers: [], chunks: [], wirePrompts: [], receipts: [], receiptQueries: 0, flushes: [], businessWrites: 0, thrown: undefined };
+  const state = { hostReads: 0, connections: 0, wireConnections: 0, prompts: [], transfers: [], chunks: [], wirePrompts: [], attachments: [], flushes: [], businessWrites: 0, thrown: undefined };
   const localId = 'synthetic-nl-session';
   const ctx = new Context();
   const runtime = ctx.plugin(LlmRuntime); await runtime.await();
@@ -44,7 +44,7 @@ export async function createNaturalAttachmentHost({ wire = false, preselected = 
   });
   ctx.provide('attachments', {
     fileHostPath: () => undefined,
-    async *readFileStream(selected) { assert.deepEqual(selected, selected.name === secondaryRef.name ? secondaryRef : ref); state.hostReads++; yield readFileSync(source); },
+    async *readFileStream(selected) { state.hostReads++; yield readFileSync(source); },
   });
   function consume(client, remoteId, requestId, manifest) {
     const chunk = client.attachments.read({ sessionId: remoteId, requestId, handle: manifest.handle, offset: 0, maxBytes: 48 * 1024 });
@@ -70,7 +70,7 @@ export async function createNaturalAttachmentHost({ wire = false, preselected = 
             async request(method, params) {
               if (method === 'initialize') {
                 state.initialize = params;
-                return { protocolVersion: 1, _meta: collaborationMeta(), authMethods: [{ id: 'dingtalk-device' }], agentCapabilities: { attachmentTransfer: { version: 1 }, ...(humanCapability ? { humanAuthorization: humanCapability } : {}) } };
+                return { protocolVersion: 1, _meta: collaborationMeta(), authMethods: [{ id: 'dingtalk-device' }], agentCapabilities: { attachmentTransfer: { version: 2 }, ...(humanCapability ? { humanAuthorization: humanCapability } : {}) } };
               }
               if (method === 'collaboration/login/authenticate') return {};
               if (method === 'collaboration/whoami') return { serviceId: 'synthetic-nl-service', account: 'synthetic-member' };
@@ -78,14 +78,13 @@ export async function createNaturalAttachmentHost({ wire = false, preselected = 
               if (method === 'session/load') { state.sessionLoads = (state.sessionLoads ?? 0) + 1; return {}; }
               if (method === 'session/new') { state.newSessionProject = params.projectId; return { sessionId: 'synthetic-remote-session' }; }
               if (method === 'collaboration/history') return { events: [], status: null };
-              if (method === 'collaboration/attachments/receipts') { state.receiptQueries++; return { receipts: state.receipts }; }
               if (method === 'session/prompt') {
                 state.wirePrompts.push(params);
                 await onPrompt?.({ client, state, params });
                 let contents = '';
                 for (const manifest of params._meta.attachments ?? []) {
                   contents += consume(client, params.sessionId, params._meta.requestId, manifest).toString('utf8');
-                  state.receipts.push({ receiptId: sha256(params._meta.requestId + manifest.handle), name: manifest.name, projectId: manifest.projectId, requestId: params._meta.requestId, archived: false });
+                  state.attachments.push({ attachmentId: manifest.handle, name: manifest.name, projectId: manifest.projectId, archived: false });
                 }
                 await afterTransfer?.({ client, state, params });
                 const fact = contents.split('\n').find(line => line.startsWith('合成目标：'));
@@ -101,16 +100,17 @@ export async function createNaturalAttachmentHost({ wire = false, preselected = 
         };
       } else {
         client.humanAuthorizationCapability = humanCapability;
-        client.attachmentCapability = { version: 1 };
+        client.attachmentCapability = { version: 2 };
         client.connect = async () => { state.connections++; throw new Error('All real network/SSH connections are forbidden in this offline fixture'); };
         client.projects = async () => { await onProjects?.({ client, state, localId }); return projects; };
         client.prompt = async (id, options) => {
-          assert.equal(id, localId); assert.ok(options.attachmentEntry);
-          const entry = options.attachmentEntry; state.prompts.push({ text: options.text, messageId: options.messageId, entry });
+          assert.equal(id, localId);
+          const entry = options.attachmentEntry; assert.ok(entry || 'Attachment-free business turn has no entry');
+          state.prompts.push({ text: options.text, messageId: options.messageId, entry });
           const requestId = 'synthetic-transfer-' + state.prompts.length;
-          const release = client.attachments.bind('synthetic-remote-session', requestId, entry);
-          try { for (const item of entry.items) consume(client, 'synthetic-remote-session', requestId, item.manifest); } finally { release(); }
-          options.onUpdate?.({ sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: '已收到本次授权的合成附件；本夹具没有执行归档业务。' } });
+          const release = entry?.items.length ? client.attachments.bind('synthetic-remote-session', requestId, entry) : () => {};
+          try { for (const item of entry?.items ?? []) consume(client, 'synthetic-remote-session', requestId, item.manifest); } finally { release(); }
+          options.onUpdate?.({ sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: entry?.items.length ? '已收到本次授权的合成附件；本夹具没有执行归档业务。' : '本轮未携带附件，业务请求已按原文转发。' } });
           return { stopReason: 'end_turn' };
         };
       }

@@ -2,7 +2,6 @@ import { createHash, randomBytes } from 'node:crypto';
 import { openSync, closeSync, fstatSync, readSync, lstatSync, realpathSync, constants } from 'node:fs';
 import { resolve, relative, isAbsolute, basename, dirname } from 'node:path';
 import { AccessError } from './protocol.mjs';
-import { classifyHumanIntent, currentHumanInstruction } from './human-intent.mjs';
 import { makeHumanAuthorization } from './human-authorization.mjs';
 import { MAX_ATTACHMENT_BYTES, MAX_MESSAGE_ATTACHMENTS, ATTACHMENT_CHUNK_BYTES, safeAttachmentName, validateAttachmentManifest } from './attachment-protocol.mjs';
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -13,17 +12,6 @@ export function rejectGifUpload({name,mediaType,data}={}) {
 export function explicitPaths(text) {
   if (typeof text !== 'string') return [];
   return [...text.matchAll(/(?:^|[\s（(])@(?:"([^"\r\n]+)"|'([^'\r\n]+)'|([^\s\r\n]+))/gu)].map(match => match[1] ?? match[2] ?? match[3]);
-}
-function authorization(text) {
-  const intent = classifyHumanIntent(text), instruction = currentHumanInstruction(text);
-  if (intent.kind === 'clarify') throw new AccessError(-32602, intent.message);
-  const projects = [...instruction.matchAll(/(?:project_id|项目ID|项目id)\s*[:：=]\s*([a-f0-9]{32})(?![a-f0-9])/gu)];
-  const project = projects.length === 1 ? projects[0] : undefined;
-  const operations = [...instruction.matchAll(/^附件操作\s*[:：]\s*(上传并归档|仅传输)\s*$/gmu)];
-  if (!project || operations.length !== 1) throw new AccessError(-32602, '附件请求须在当前消息单独写出 附件操作: 上传并归档（或仅传输）及 project_id: <项目ID>');
-  const archiveAuthorized = operations[0][1] === '上传并归档';
-  if (archiveAuthorized !== (intent.kind === 'archive')) throw new AccessError(-32602, '附件操作与本次明确意图不一致；未处理附件。');
-  return { projectId: project[1], archiveAuthorized };
 }
 function ensureLocalFile(path, workspace) {
   if (typeof workspace !== 'string' || !isAbsolute(workspace)) throw new AccessError(-32602, 'Explicit local session workspace required for path attachments');
@@ -54,37 +42,16 @@ function readOneFile(path, expected) {
 }
 /** Current human message only. Nothing derived from remote output or a file placeholder grants authority. */
 export class AttachmentAuthorization {
-  constructor({ attachmentStore, workspaceOf = () => undefined } = {}) { this.attachmentStore = attachmentStore; this.workspaceOf = workspaceOf; this.pending = new Map(); this.active = new Map(); this.unresolved = new Map(); }
-  rememberUnresolved(localId, message, context) {
-    if (message?.role !== 'user' || message.source?.kind !== 'user' || !message.id) return;
-    const native = message.content.filter(block => ['file', 'image'].includes(block.type)).map(block => ({ ...block, attachment: { ...block.attachment } }));
-    const text = message.content.filter(block => block.type === 'text').map(block => block.text).join('\n');
-    const paths = explicitPaths(text);
-    if (native.length || paths.length) this.unresolved.set(localId, { ...context, messageId: String(message.id), native, paths });
-  }
-  unresolvedSelection(localId, context) {
-    const selected = this.unresolved.get(localId);
-    if (!selected || selected.account !== context.account || selected.serviceId !== context.serviceId || selected.workspace !== context.workspace || selected.projectId && selected.projectId !== context.projectId) return undefined;
-    return selected;
-  }
+  constructor({ attachmentStore, workspaceOf = () => undefined } = {}) { this.attachmentStore = attachmentStore; this.workspaceOf = workspaceOf; this.pending = new Map(); this.active = new Map(); }
   async capture({ localId, message, workspace, signal, admission }) {
     if (message?.role !== 'user' || message.source?.kind !== 'user' || !message.id) throw new AccessError(-32602, 'Current human message required for attachment selection');
     const text = message.content.filter(block=>block.type==='text').map(block=>block.text).join('\n');
-    let native = message.content.filter(block=>['file','image'].includes(block.type));
-    let paths = explicitPaths(text);
-    if (!native.length && !paths.length && admission?.pendingSelection) {
-      if (this.unresolved.get(localId) !== admission.pendingSelection) throw new AccessError(-32013, '此前附件选择已失效，请重新选择。');
-      native = admission.pendingSelection.native; paths = admission.pendingSelection.paths;
-    }
-    if (!native.length && !paths.length && !admission) return undefined;
+    const native = message.content.filter(block=>['file','image'].includes(block.type));
+    const paths = explicitPaths(text);
+    if (!native.length && !paths.length) return undefined;
     if (native.length+paths.length > MAX_MESSAGE_ATTACHMENTS) throw new AccessError(-32602, 'At most five explicitly selected attachments');
-    let permitted;
-    if (admission) {
-      if (!/^[a-f0-9]{32}$/u.test(admission.projectId ?? '')) throw new AccessError(-32602, '本次附件项目尚未明确。');
-      const intent = classifyHumanIntent(text);
-      if ((native.length || paths.length) && (intent.kind === 'clarify' || intent.kind !== admission.kind)) throw new AccessError(-32013, '附件动作没有取得本次明确授权。');
-      permitted = { projectId: admission.projectId, archiveAuthorized: intent.kind === 'archive' };
-    } else permitted = authorization(text);
+    if (!admission || !/^[a-f0-9]{32}$/u.test(admission.projectId ?? '')) throw new AccessError(-32602, '本次附件项目尚未明确。');
+    const permitted = { projectId: admission.projectId };
     const items=[];
     const nativeBytes=native.reduce((sum,block)=>sum+(block.attachment?.bytes??0),0);
     if(!Number.isSafeInteger(nativeBytes)||nativeBytes>MAX_ATTACHMENT_BYTES)throw new AccessError(-32602,'Native message attachments exceed 20MiB total');
@@ -104,7 +71,7 @@ export class AttachmentAuthorization {
     }
     for (const selected of paths) { if(signal?.aborted)throw signal.reason; const path=ensureLocalFile(selected,workspace??this.workspaceOf(localId));if(items.reduce((sum,item)=>sum+item.manifest.bytes,0)+lstatSync(path).size>MAX_ATTACHMENT_BYTES)throw new AccessError(-32602,'Message attachments exceed 20MiB total');items.push(this.item(safeAttachmentName(basename(path)),readOneFile(path),'local-path',permitted)); }
     validateAttachmentManifest(items.map(item=>item.manifest));
-    const entry={localId,messageId:String(message.id),items,text,...(admission ? { humanAuthorization: makeHumanAuthorization({messageId:String(message.id),text,projectId:admission.projectId,items,receiptScopes:admission.receiptScopes??[]}) } : {})};this.pending.set(`${localId}\0${message.id}`,entry);if(native.length||paths.length)this.unresolved.delete(localId);return entry;
+    const entry={localId,messageId:String(message.id),items,text,...(admission ? { humanAuthorization: makeHumanAuthorization({messageId:String(message.id),text,projectId:admission.projectId}) } : {})};this.pending.set(`${localId}\0${message.id}`,entry);return entry;
   }
   item(name,data,sourceKind,permitted){rejectGifUpload({name,data});return {manifest:{handle:randomBytes(32).toString('hex'),name,bytes:data.length,sha256:digest(data),sourceKind,...permitted},data};}
   take(localId,messageId){const key=`${localId}\0${messageId}`,entry=this.pending.get(key);this.pending.delete(key);return entry;}
@@ -115,5 +82,5 @@ export class AttachmentAuthorization {
     if(!Number.isSafeInteger(offset)||offset<0||offset>=item.data.length||!Number.isSafeInteger(maxBytes)||maxBytes<1||maxBytes>ATTACHMENT_CHUNK_BYTES)throw new AccessError(-32602,'Invalid attachment chunk bounds');
     const data=item.data.subarray(offset,Math.min(offset+maxBytes,item.data.length));return {offset,data:data.toString('base64'),bytes:data.length,eof:offset+data.length===item.data.length};
   }
-  clear(){this.pending.clear();this.active.clear();this.unresolved.clear();}
+  clear(){this.pending.clear();this.active.clear();}
 }
