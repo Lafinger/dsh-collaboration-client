@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { openSync, closeSync, fstatSync, readSync, lstatSync, realpathSync, constants } from 'node:fs';
+import { openSync, closeSync, fstatSync, readSync, lstatSync, realpathSync, existsSync, constants } from 'node:fs';
 import { resolve, relative, isAbsolute, basename, dirname } from 'node:path';
 import { AccessError } from './protocol.mjs';
 import { makeHumanAuthorization } from './human-authorization.mjs';
@@ -14,29 +14,32 @@ export function explicitPaths(text) {
   return [...text.matchAll(/(?:^|[\s（(])@(?:"([^"\r\n]+)"|'([^'\r\n]+)'|([^\s\r\n]+))/gu)].map(match => match[1] ?? match[2] ?? match[3]);
 }
 function ensureLocalFile(path, workspace) {
-  if (typeof workspace !== 'string' || !isAbsolute(workspace)) throw new AccessError(-32602, 'Explicit local session workspace required for path attachments');
+  if (typeof workspace !== 'string' || !isAbsolute(workspace)) throw new AccessError(-32602, '当前会话没有可用的本地工作区，无法读取 @ 附件。');
   const root = realpathSync(workspace), target = resolve(root, path), rel = relative(root, target);
-  if (!rel || rel === '..' || rel.startsWith('../') || rel.startsWith('..\\') || isAbsolute(rel)) throw new AccessError(-32602, 'Attachment must be one file inside current local workspace');
+  if (!rel || rel === '..' || rel.startsWith('../') || rel.startsWith('..\\') || isAbsolute(rel)) throw new AccessError(-32602, '附件必须在当前会话工作区内。');
   const lower = target.toLowerCase().replaceAll('\\','/');
-  if (lower.split('/').some(part => ['.dsh','.ssh','.git'].includes(part)) || /(?:^|\/)(?:\.env(?:\.[^/]*)?|(?:\.?credentials|secrets)(?:\.[^/]*)?|id_(?:rsa|ed25519|ecdsa)|[^/]*_ed25519|[^/]*\.(?:pem|key|pfx|p12))$/i.test(lower)) throw new AccessError(-32602, 'Credential/key/private-state paths are not attachment sources');
+  if (lower.split('/').some(part => ['.dsh','.ssh','.git'].includes(part)) || /(?:^|\/)(?:\.env(?:\.[^/]*)?|(?:\.?credentials|secrets)(?:\.[^/]*)?|id_(?:rsa|ed25519|ecdsa)|[^/]*_ed25519|[^/]*\.(?:pem|key|pfx|p12))$/i.test(lower)) throw new AccessError(-32602, '凭据、密钥或私有状态目录不能作为附件。');
+  if (!existsSync(target)) throw new AccessError(-32602, '附件文件不存在：请确认文件名与当前会话工作区。');
   let part = target;
-  for (;;) { if (lstatSync(part).isSymbolicLink()) throw new AccessError(-32602, 'Attachment path must not contain symlinks or junctions'); if (part === root) break; const parent = dirname(part); if (parent === part) throw new AccessError(-32602, 'Attachment path escaped workspace'); part = parent; }
-  if (realpathSync(target) !== target) throw new AccessError(-32602, 'Attachment path escaped through a filesystem link');
-  if (!lstatSync(target).isFile()) throw new AccessError(-32602, 'Directories are not upload attachments');
+  for (;;) { if (lstatSync(part).isSymbolicLink()) throw new AccessError(-32602, '附件路径不能包含符号链接或 junction。'); if (part === root) break; const parent = dirname(part); if (parent === part) throw new AccessError(-32602, '附件必须在当前会话工作区内。'); part = parent; }
+  if (realpathSync(target) !== target) throw new AccessError(-32602, '附件路径经过了文件系统链接，已拒绝。');
+  if (!lstatSync(target).isFile()) throw new AccessError(-32602, '目录不能作为附件上传。');
   return target;
 }
 function readOneFile(path, expected) {
   const before=lstatSync(path);
-  if(!before.isFile()||before.isSymbolicLink())throw new AccessError(-32602,'Attachment source must remain a regular non-link file');
+  if(!before.isFile()||before.isSymbolicLink())throw new AccessError(-32602,'附件必须是普通文件，且不能是链接。');
   const fd = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
   try {
     const stat = fstatSync(fd);
-    if (stat.dev!==before.dev||stat.ino!==before.ino||!stat.isFile() || stat.size < 1 || stat.size > MAX_ATTACHMENT_BYTES) throw new AccessError(-32602, 'File must be nonempty and at most 20MiB');
+    if (stat.dev!==before.dev||stat.ino!==before.ino||!stat.isFile()) throw new AccessError(-32602, '读取附件时文件发生变化，请重新选择。');
+    if (stat.size === 0) throw new AccessError(-32602, '附件文件为空，请先保存内容后再上传。');
+    if (stat.size > MAX_ATTACHMENT_BYTES) throw new AccessError(-32602, '附件超过 20MiB 上限，请选择更小的文件。');
     const bytes = Buffer.alloc(stat.size); let offset = 0;
-    while (offset < bytes.length) { const n = readSync(fd, bytes, offset, bytes.length-offset, offset); if (!n) throw new AccessError(-32602, 'File changed during upload selection'); offset += n; }
+    while (offset < bytes.length) { const n = readSync(fd, bytes, offset, bytes.length-offset, offset); if (!n) throw new AccessError(-32602, '读取附件时文件发生变化，请重新选择。'); offset += n; }
     const after=fstatSync(fd);
-    if (after.size !== stat.size || after.mtimeMs!==stat.mtimeMs || after.ctimeMs!==stat.ctimeMs) throw new AccessError(-32602, 'File changed during upload selection');
-    if (expected && (expected.bytes !== bytes.length || expected.attachmentId !== 'sha256:'+digest(bytes))) throw new AccessError(-32602, 'Host attachment reference digest/length mismatch');
+    if (after.size !== stat.size || after.mtimeMs!==stat.mtimeMs || after.ctimeMs!==stat.ctimeMs) throw new AccessError(-32602, '读取附件时文件发生变化，请重新选择。');
+    if (expected && (expected.bytes !== bytes.length || expected.attachmentId !== 'sha256:'+digest(bytes))) throw new AccessError(-32602, '附件内容与宿主记录不一致，未发送业务请求。');
     return bytes;
   } finally { closeSync(fd); }
 }
@@ -59,7 +62,8 @@ export class AttachmentAuthorization {
       if (signal?.aborted) throw signal.reason;
       const ref=block.attachment; if (!ref || !this.attachmentStore) throw new AccessError(-32602, 'Official host attachment storage unavailable');
       rejectGifUpload(ref);
-      if (!Number.isSafeInteger(ref.bytes) || ref.bytes < 1 || ref.bytes > MAX_ATTACHMENT_BYTES) throw new AccessError(-32602, 'Native attachment exceeds selection size limit');
+      if (ref.bytes === 0) throw new AccessError(-32602, '附件文件为空，请先保存内容后再上传。');
+      if (!Number.isSafeInteger(ref.bytes) || ref.bytes < 1 || ref.bytes > MAX_ATTACHMENT_BYTES) throw new AccessError(-32602, '附件大小无效或超过 20MiB 上限，请重新选择。');
       const name=safeAttachmentName(ref.name ?? ({'image/png':'image.png','image/jpeg':'image.jpg','image/webp':'image.webp','image/gif':'image.gif'}[ref.mediaType] ?? 'attachment.bin'));
       const path=block.type==='file' ? this.attachmentStore.fileHostPath(ref) : this.attachmentStore.imageHostPath(ref);
       let data;
@@ -73,7 +77,7 @@ export class AttachmentAuthorization {
     validateAttachmentManifest(items.map(item=>item.manifest));
     const entry={localId,messageId:String(message.id),items,text,...(admission ? { humanAuthorization: makeHumanAuthorization({messageId:String(message.id),text,projectId:admission.projectId}) } : {})};this.pending.set(`${localId}\0${message.id}`,entry);return entry;
   }
-  item(name,data,sourceKind,permitted){rejectGifUpload({name,data});return {manifest:{handle:randomBytes(32).toString('hex'),name,bytes:data.length,sha256:digest(data),sourceKind,...permitted},data};}
+  item(name,data,sourceKind,permitted){if(!data.length)throw new AccessError(-32602,'附件文件为空，请先保存内容后再上传。');rejectGifUpload({name,data});return {manifest:{handle:randomBytes(32).toString('hex'),name,bytes:data.length,sha256:digest(data),sourceKind,...permitted},data};}
   take(localId,messageId){const key=`${localId}\0${messageId}`,entry=this.pending.get(key);this.pending.delete(key);return entry;}
   bind(sessionId,requestId,entry,signal){const key=`${sessionId}\0${requestId}`;this.active.set(key,{...entry,signal});return()=>this.active.delete(key);}
   read({sessionId,requestId,handle,offset,maxBytes}){

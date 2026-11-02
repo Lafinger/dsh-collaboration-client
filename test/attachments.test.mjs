@@ -40,3 +40,9 @@ test('native attachment verifies bytes from actual host reference, not textual f
  assert.equal(await store.capture({localId:'l',message:human('[File "native.md": verbatim read-only copy saved at "/tmp/private"]')}),undefined);
  assert.throws(()=>validateAttachmentManifest([{...entry.items[0].manifest,server_path:'/etc/passwd'}]));
 });
+test('empty and missing @ files are refused with a human-readable reason',async()=>{
+ const root=mkdtempSync(join(tmpdir(),'collab-empty-'));writeFileSync(join(root,'empty.md'),'');
+ const store=new AttachmentAuthorization({workspaceOf:()=>root});
+ await assert.rejects(store.capture({localId:'l',message:human('上传 @empty.md'),admission:{projectId}}),/附件文件为空/);
+ await assert.rejects(store.capture({localId:'l',message:human('上传 @missing.md'),admission:{projectId}}),/附件文件不存在/);
+});

@@ -38,9 +38,9 @@ github:Lafinger/dsh-collaboration-client#v0.6.3-rc.6
 
 - 全量门禁 `pnpm run check`：**exit 0**（单元 142、集成 63、依赖审计、命名检查、构建全过）。
 - 双端联合 `pnpm run check:joint`（需 `DSH_COLLABORATION_SERVER_ROOT`）：2/2 通过——协议字节契约一致、QR MVP TLS 双客户端登录往返通过。
+- 真人验收（2026-10-30，真实 DSH GUI＋真实模型）：两轮通过——第一轮无查询类前置工具直接读取并归档为第 1 版；第二轮不发新附件仍取同一 handle、内容相同去重、版本保持 1。完整记录见服务端仓库 `docs/REAL-ACCEPTANCE-2026-10-30.md`。
 
 ## 残留风险与边界
 
-- 未在真实 DSH GUI 里做真人业务验收；结论来自离线自动化与双端联合测试，未调用真实模型。
 - 协议硬配对不可灰度：服务端未升级前，本客户端无法连接；反之亦然。
 - 服务端旧会话中已接收的 v3 附件（receipt）不能被新链路读取，需成员重新上传一次，不回填。
