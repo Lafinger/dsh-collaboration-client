@@ -32,14 +32,14 @@ github:Lafinger/dsh-collaboration-client
 这会安装默认分支代码，不自动选择最新 Release。安装统一使用固定版本：
 
 ```text
-github:Lafinger/dsh-collaboration-client#v0.6.3-rc.7
+github:Lafinger/dsh-collaboration-client#v0.6.3-rc.8
 ```
 
 隔离 CLI 验证示意：
 
 ```sh
 dsh plugin --profile collaboration-compat-github add github:Lafinger/dsh-collaboration-client --ignore-scripts
-dsh plugin --profile collaboration-compat-github-tag add github:Lafinger/dsh-collaboration-client#v0.6.3-rc.7 --ignore-scripts
+dsh plugin --profile collaboration-compat-github-tag add github:Lafinger/dsh-collaboration-client#v0.6.3-rc.8 --ignore-scripts
 ```
 
 还可在[Releases](https://github.com/Lafinger/dsh-collaboration-client/releases)下载 `.tgz`，核对 SHA256SUMS 后安装。main移到新提交不改变已固定的tag；版本tag/附件不得移动或覆盖。
@@ -51,16 +51,16 @@ dsh plugin --profile collaboration-compat-github-tag add github:Lafinger/dsh-col
 首次标签是 v0.1.2。后续：
 
 1. 在[包配置](../package.json)升版，保持支持的DSH精确版本。
-2. 更新必要文档；使用pnpm更新lockfile并执行check、pack/pack:check。README 与本文的固定安装源必须同步到新版本，并新增 `docs/RELEASE-<版本>.md` 写明该版本固定安装源；`test/docs-install-source.test.mjs` 会拦住忘记同步的提交。
+2. 更新必要文档并执行check、pack/pack:check。仅改版本或文档时保持现有依赖与lockfile图不变，不为发布顺带升级依赖；依赖确有变更时才使用固定pnpm更新lockfile。README 与本文的固定安装源必须同步到新版本，并新增 `docs/RELEASE-<版本>.md` 写明该版本固定安装源；`test/docs-install-source.test.mjs` 会拦住忘记同步的提交。
 3. 在唯一分支提交并创建PR，等待Ubuntu／Windows／Package三个required checks通过后普通合并，不admin bypass；再等待准确main提交的CI成功。
 4. 创建带注释的版本tag，push tag：
 
 ```sh
-git tag -a v0.6.3-rc.7 -m "Release v0.6.3-rc.7"
-git push origin v0.6.3-rc.7
+git tag -a v0.6.3-rc.8 -m "Release v0.6.3-rc.8"
+git push origin v0.6.3-rc.8
 ```
 
-这里0.6.3-rc.7是本版示例，必须和package.version相同；若该tag已发布，后续须另升未用版本，不能重打或覆盖。不能只改标签不升包版本。带rc/beta等版本自动标prerelease，普通版本设为latest。
+这里0.6.3-rc.8是本版示例，必须和package.version相同；若该tag已发布，后续须另升未用版本，不能重打或覆盖。不能只改标签不升包版本。带rc/beta等版本自动标prerelease，普通版本设为latest。
 
 5. 检查GitHub Actions结果和Release附件。标签CI里的 `install:check` 已按成员方式安装该标签并挂载成功，发布前即确认可安装；发布后再在独立环境按同一固定tag复核一次。
 
@@ -79,7 +79,7 @@ pnpm run check
 pnpm pack --out .dsh/dsh-collaboration-client.tgz
 node scripts/check-package.mjs .dsh/dsh-collaboration-client.tgz
 pnpm run install:check github:Lafinger/dsh-collaboration-client
-pnpm run install:check github:Lafinger/dsh-collaboration-client#v0.6.3-rc.7
+pnpm run install:check github:Lafinger/dsh-collaboration-client#v0.6.3-rc.8
 ```
 
 GitHub来源验证需要网络，单独运行，不让普通离线check依赖远端状态；CI只在推送 v* 标签时执行它，并把结果作为发布 GitHub Release 的前置条件，因此"可安装"在发布前就有证据，而不是发布后才发现。
