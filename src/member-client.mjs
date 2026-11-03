@@ -80,12 +80,20 @@ export class MemberClient {
     const peer=await this.ensureTransport();this.assertCurrent();
     if(this.loginRequired){
       if(!this.login||this.login.expiresAt<=Date.now())throw new AccessError(-32003,'请从设置 → 协作服务完成钉钉扫码登录');
-      try{await peer.request('collaboration/login/authenticate',{token:this.login.token,deviceId:this.deviceId});}
-      catch(error){if(error.code===-32003){this.login=null;this.attached.clear();this.attachments?.clear();}throw error;}
+      const login=this.login;
+      try{await peer.request('collaboration/login/authenticate',{token:login.token,deviceId:this.deviceId});}
+      catch(error){if(error.code===-32003&&this.login===login){this.login=null;this.attached.clear();this.attachments?.clear();}throw error;}
       const identity=await peer.request('collaboration/whoami',{});
       if(identity.account!==this.account||identity.serviceId!==this.serviceId)throw new AccessError(-32003,'Connected identity/service differs from configured entry');
+      // Presentation-only update from the authenticated identity. Never adopt credentials,
+      // deadlines, device/epoch or administrative authority from this profile response.
+      this.assertCurrent();if(this.login===login)await this.refreshAuthenticatedProfile(identity,login);
     }
     this.assertCurrent();return peer;
+  }
+  async refreshAuthenticatedProfile(identity,login){
+    if(typeof identity.name!=='string'||!identity.name.trim()||identity.name.length>200||identity.name===login.name)return;
+    login.name=identity.name;
   }
   async beginLogin(){
     const peer=await this.ensureTransport();if(!this.loginRequired)throw new AccessError(-32011,'Server does not support device login');

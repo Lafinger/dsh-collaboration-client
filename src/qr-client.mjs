@@ -51,7 +51,7 @@ export class QrMemberClient extends HttpsMemberClient {
  authStatus(){return {...super.authStatus(),loginMethod:'dingtalk-qr',pending:!!this.pendingLogin,pendingExpiresAt:this.pendingLogin?.expiresAt??null,pendingRecovery:this.pendingLogin?.phase==='starting',cancelUnknown:this.cancelUnknown,error:this.lastLoginError??this.pendingError};}
  async readAuthStatus(){
   try{await this.restoreLogin();if(this.cancelUnknown)await this.cancelLogin();else if(this.pendingLogin)await this.completeLogin();if(this.login){await this.ensureConnected();this.lastLoginError=null;}this.pendingError=null;return this.authStatus();}
-  catch(error){if(network(error)){this.pendingError='网络结果未确认；保留原请求，刷新时只恢复实际状态，不重新授权或弹窗。';return {...this.authStatus(),authenticated:false,error:this.pendingError};}this.lastLoginError=error.message;if(error.code===-32003&&!this.login&&!this.pendingLogin)return this.authStatus();throw error;}
+  catch(error){if(error.code===-32014){this.lastLoginError='组织资格暂不可核验；保留原登录且不延长期限，受保护操作暂停，请稍后刷新。';return {...this.authStatus(),qualificationUnavailable:true};}if(network(error)){this.pendingError='网络结果未确认；保留原请求，刷新时只恢复实际状态，不重新授权或弹窗。';return {...this.authStatus(),authenticated:false,error:this.pendingError};}this.lastLoginError=error.message;if(error.code===-32003&&!this.login&&!this.pendingLogin)return this.authStatus();throw error;}
  }
  cancelLogin(){if(this.cancelTask)return this.cancelTask;this.cancelTask=this.cancelQrLogin().finally(()=>{this.cancelTask=null;});return this.cancelTask;}
  async cancelQrLogin(){
