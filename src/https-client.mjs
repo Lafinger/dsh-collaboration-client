@@ -21,6 +21,11 @@ export class HttpsMemberClient extends MemberClient {
   if(!this.login)throw new AccessError(-32003,'请在设置 → 协作服务用电脑钉钉登录');
   try{return await super.ensureConnected();}catch(error){if(error.code===-32003&&this.login===null)this.vault.clear();throw error;}
  }
+ async refreshAuthenticatedProfile(identity,login){
+  if(typeof identity.name!=='string'||!identity.name.trim()||identity.name.length>200||identity.name===login.name)return;
+  // Preserve the exact current encrypted credential snapshot, changing only its label.
+  this.vault.save({...login,name:identity.name,origin:this.origin});login.name=identity.name;
+ }
  async beginLogin(){
   await this.restoreLogin();if(this.login||this.pendingLogin)throw new AccessError(-32003,'请先退出当前设备，再发起新登录');
   const peer=await this.ensureTransport(),proof=randomBytes(32).toString('base64url');
@@ -55,8 +60,8 @@ export class HttpsMemberClient extends MemberClient {
    await this.restoreLogin();
    if(this.pendingLogin)await this.completeLogin();
    if(!this.login)return this.authStatus();
-   await this.ensureConnected();return this.authStatus();
-  }catch(error){this.lastLoginError=error.message;if(error.code===-32003){if(this.login===null)this.vault.clear();this.pendingLogin=null;}throw error;}
+   await this.ensureConnected();this.lastLoginError=null;return this.authStatus();
+  }catch(error){this.lastLoginError=error.message;if(error.code===-32014)return {...this.authStatus(),qualificationUnavailable:true,error:'组织资格暂不可核验；保留原登录且不延长期限，受保护操作暂停，请稍后刷新。'};if(error.code===-32003){if(this.login===null)this.vault.clear();this.pendingLogin=null;}throw error;}
  }
  async logout(){
   // Local encrypted credentials are cleared regardless of network state; server revoke is attempted once.

@@ -2,6 +2,10 @@
 
 客户端 DSH 插件：扫码改版通过一个可信HTTPS地址、系统默认浏览器和手机钉钉官方授权访问协作服务，保存本地／远端会话映射，恢复记录但不重发业务指令。
 
+## 0.6.3-rc.9（组织资格与姓名同步展示）
+
+固定安装源：`github:Lafinger/dsh-collaboration-client#v0.6.3-rc.9`，配套服务端`0.7.2-rc.11`。显示成员核验状态、时间及原角色待重新分配标记；刷新失败不允许用旧候选提交；本人姓名从同账号同服务的可信认证响应更新，不修改登录期限或会话身份。协作v4／附件2／人类授权3不变；旧服务端有明确兼容提示，不假称支持组织同步。详见[本版发行说明](<docs/RELEASE-0.6.3-rc.9.md>)。由用户自行安装，不代装现用DSH。
+
 ## 0.6.3-rc.8（服务端通用文本读取配套说明）
 
 固定安装源：`github:Lafinger/dsh-collaboration-client#v0.6.3-rc.8`。本版删除未使用的客户端256KiB正文限额常量并同步附件能力说明；通用文本解码、正文限额取消、历史派生解析缓存刷新与关联说明边界主要由配套服务端 `0.7.2-rc.9` 实现，**不是客户端新增执行解析**。协作v4／附件扩展2／人类授权3不变，旧 rc.7 仍在线协议兼容，不要求清理登录或会话映射。发布不代装现用DSH，不代表生产部署或真人／真实模型验收。详见[本版候选发行说明](<docs/RELEASE-0.6.3-rc.8.md>)。
@@ -115,12 +119,12 @@ github:Lafinger/dsh-collaboration-client
 DSH 插件管理器安装来源统一填固定版本，把版本号换成要装的发行版：
 
 ```text
-github:Lafinger/dsh-collaboration-client#v0.6.3-rc.8
+github:Lafinger/dsh-collaboration-client#v0.6.3-rc.9
 ```
 
 不带版本的入口 `github:Lafinger/dsh-collaboration-client` 读取默认分支，不自动选择最新 Release。安装器只接受包名、git 仓库地址或 tarball 地址；填 `…/releases/tag/…` 这类网页地址会被拒绝（`a URL must point at a git repository or a tarball`），Release 页面仅用于查阅附件与说明。
 
-本版为预发布候选 `v0.6.3-rc.8`，发行状态以对应标签 CI 与 GitHub Release 为准，二者成功后再安装；版本号与安装串不代表已发布。旧发行版和已交付测试包不覆盖。仅 GitHub 构建/发布，不发布 npm 或插件市场；见[发布说明](docs/RELEASE.md)、[本版说明](docs/RELEASE-0.6.3-rc.8.md)及[本次真人验收](docs/CLIENT-UI-ACCEPTANCE-2026-10-21.md)。历史证据保留在[早期线上验收](docs/RENAME-RELEASE-VERIFY.md)与[首版记录](docs/GITHUB-RELEASE-VERIFY.md)。
+本版为预发布候选 `v0.6.3-rc.9`，发行状态以对应标签 CI 与 GitHub Release 为准，二者成功后再安装；版本号与安装串不代表已发布。旧发行版和已交付测试包不覆盖。仅 GitHub 构建/发布，不发布 npm 或插件市场；见[发布说明](docs/RELEASE.md)、[本版说明](docs/RELEASE-0.6.3-rc.9.md)及[本次真人验收](docs/CLIENT-UI-ACCEPTANCE-2026-10-21.md)。历史证据保留在[早期线上验收](docs/RENAME-RELEASE-VERIFY.md)与[首版记录](docs/GITHUB-RELEASE-VERIFY.md)。
 
 ## 首次配置
 
@@ -140,7 +144,7 @@ github:Lafinger/dsh-collaboration-client#v0.6.3-rc.8
 
 ## 开发与检查
 
-当前候选客户端 **0.6.3-rc.8** 固定验证宿主 **DSH 0.2.1-rc.2**、Cordis `4.0.5`、Schemastery `3.18.5`。要求Node >=24，使用本项目lockfile；不以版本豁免绕过兼容门禁，也不承诺未验证的历史或未来宿主。旧客户端0.6.0及更早发行资产不变，不能把其旧宿主声明当作本次兼容结果。协作扩展协议v4（ACP-shaped基础版本1）与附件扩展2硬配对，拒绝旧协作v3及业务协议降级，本版通用文本能力配套服务端 v0.7.2-rc.9，旧客户端 rc.7 的协作v4／附件扩展2／人类授权3仍兼容；本轮不改既有项目/登录/对话归属，不要求清登录或会话映射。附件上传即授权、按会话持续有效；图片视觉读取不等于正式业务结论。
+当前候选客户端 **0.6.3-rc.9** 固定验证宿主 **DSH 0.2.1-rc.2**、Cordis `4.0.5`、Schemastery `3.18.5`。要求Node >=24，使用本项目lockfile；不以版本豁免绕过兼容门禁，也不承诺未验证的历史或未来宿主。旧客户端0.6.0及更早发行资产不变，不能把其旧宿主声明当作本次兼容结果。协作扩展协议v4（ACP-shaped基础版本1）与附件扩展2硬配对，拒绝旧协作v3及业务协议降级，本版组织资格与姓名同步展示配套服务端 v0.7.2-rc.11，旧客户端 rc.8 的协作v4／附件扩展2／人类授权3仍兼容但不含新资格展示；本轮不改既有项目/登录/对话归属，不要求清登录或会话映射。附件上传即授权、按会话持续有效；图片视觉读取不等于正式业务结论。
 
 ```sh
 pnpm install --frozen-lockfile --ignore-scripts
